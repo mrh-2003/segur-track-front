@@ -1,0 +1,29 @@
+.accesos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.acceso-btn {
+  background: var(--color-fondo-alt);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background var(--transicion), border-color var(--transicion), transform 150ms;
+  font-family: var(--fuente-base);
+}
+.acceso-btn:hover { background: var(--color-primario-suave); border-color: var(--color-primario); transform: translateY(-2px); }
+
+.acceso-emoji { font-size: 1.5rem; }
+.acceso-label { font-size: var(--tam-xs); font-weight: 500; color: var(--color-texto-principal); text-align: center; }
+
+.actividad-icono {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}

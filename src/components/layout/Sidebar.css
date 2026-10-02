@@ -1,0 +1,100 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--ancho-sidebar);
+  height: 100vh;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  transition: transform var(--transicion);
+  overflow-y: auto;
+}
+
+.sidebar-oculto {
+  transform: translateX(-100%);
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  height: var(--alto-topbar);
+  border-bottom: 1px solid var(--color-borde);
+  flex-shrink: 0;
+}
+
+.sidebar-logo-icono {
+  width: 32px;
+  height: 32px;
+  background: var(--color-primario);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--tam-md);
+  border-radius: var(--radio-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-texto {
+  font-size: var(--tam-lg);
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 12px 0;
+  flex: 1;
+}
+
+.sidebar-enlace {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  margin: 2px 8px;
+  border-radius: var(--radio-md);
+  font-size: var(--tam-sm);
+  color: var(--color-sidebar-texto);
+  font-weight: 500;
+  transition: background var(--transicion), color var(--transicion);
+  position: relative;
+}
+
+.sidebar-enlace:hover {
+  background: var(--color-fondo-alt);
+  color: var(--color-texto-principal);
+}
+
+.sidebar-enlace-activo {
+  background: var(--color-sidebar-activo);
+  color: var(--color-sidebar-activo-texto);
+  font-weight: 600;
+}
+
+.sidebar-enlace-activo::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--color-sidebar-barra);
+  border-radius: 0 var(--radio-full) var(--radio-full) 0;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar-visible {
+    transform: translateX(0);
+    box-shadow: var(--sombra-xl);
+  }
+}

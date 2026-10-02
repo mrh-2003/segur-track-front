@@ -1,0 +1,7 @@
+.embed-placeholder {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-texto-tenue);
+  font-size: var(--tam-sm);
+  background: var(--color-fondo-alt);
+}

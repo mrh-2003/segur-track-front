@@ -1,0 +1,42 @@
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.campo-label {
+  font-size: var(--tam-sm);
+  font-weight: 500;
+  color: var(--color-texto-principal);
+}
+
+.campo-input,
+.campo-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  background: var(--color-superficie);
+  color: var(--color-texto-principal);
+  font-size: var(--tam-sm);
+  transition: border-color var(--transicion), box-shadow var(--transicion);
+  outline: none;
+}
+
+.campo-input:focus,
+.campo-select:focus {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+.campo-input-error,
+.campo-select-error {
+  border-color: var(--color-peligro);
+}
+
+.campo-input:disabled,
+.campo-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-fondo-alt);
+}

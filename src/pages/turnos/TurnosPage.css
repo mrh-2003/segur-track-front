@@ -1,0 +1,103 @@
+.turnos-controles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.turnos-nav-btn {
+  background: none;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: var(--tam-md);
+  color: var(--color-texto-principal);
+  transition: background var(--transicion);
+}
+.turnos-nav-btn:hover { background: var(--color-fondo-alt); }
+
+.turnos-semana-label {
+  font-size: var(--tam-sm);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.turnos-grilla-contenedor { overflow-x: auto; }
+
+.turnos-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.turnos-th-persona,
+.turnos-th-dia,
+.turnos-th-acciones {
+  padding: 8px 10px;
+  text-align: center;
+  font-size: var(--tam-xs);
+  font-weight: 600;
+  color: var(--color-texto-secundario);
+  background: var(--color-fondo-alt);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.turnos-th-persona { text-align: left; min-width: 140px; }
+
+.turnos-dia-fecha {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-texto-tenue);
+}
+
+.turnos-tr { border-bottom: 1px solid var(--color-borde-suave); }
+.turnos-tr:hover { background: var(--color-fondo-alt); }
+
+.turnos-td-persona {
+  padding: 10px;
+  font-size: var(--tam-sm);
+  font-weight: 500;
+}
+
+.turnos-td-dia {
+  padding: 6px;
+  text-align: center;
+}
+
+.turnos-td-acciones {
+  padding: 6px 10px;
+}
+
+.turno-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radio-sm);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.turno-chip-confirmado  { background: var(--color-exito-suave);      color: var(--color-exito); }
+.turno-chip-cumplido    { background: var(--color-primario-suave);    color: var(--color-primario); }
+.turno-chip-sin_confirmar { background: var(--color-advertencia-suave); color: var(--color-advertencia); }
+.turno-chip-programado  { background: var(--color-fondo-alt);         color: var(--color-texto-secundario); }
+.turno-chip-pendiente   { background: var(--color-peligro-suave);     color: var(--color-peligro); }
+
+.alerta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-radius: var(--radio-md);
+}
+.alerta-advertencia { background: var(--color-advertencia-suave); }
+.alerta-peligro     { background: var(--color-peligro-suave); }
+.alerta-info        { background: var(--color-primario-suave); }
+
+.alerta-titulo { font-size: var(--tam-sm); font-weight: 500; }
+.alerta-valor  { font-size: var(--tam-xl); font-weight: 700; }
+
+.accion-btn { background: none; border: 1px solid var(--color-borde); border-radius: var(--radio-sm); padding: 4px 8px; cursor: pointer; font-size: var(--tam-sm); transition: background var(--transicion); }
+.accion-btn:hover { background: var(--color-fondo-alt); }
+.accion-btn-peligro:hover { background: var(--color-peligro-suave); border-color: var(--color-peligro); }

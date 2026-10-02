@@ -1,0 +1,39 @@
+import { NavLink } from 'react-router-dom';
+import './Sidebar.css';
+
+const MENU = [
+  { ruta: '/',                 etiqueta: 'Inicio' },
+  { ruta: '/personal',         etiqueta: 'Personal' },
+  { ruta: '/turnos',           etiqueta: 'Turnos' },
+  { ruta: '/servicios',        etiqueta: 'Servicios' },
+  { ruta: '/incidencias',      etiqueta: 'Incidencias' },
+  { ruta: '/dashboard-bi',     etiqueta: 'Dashboard BI' },
+  { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio' },
+  { ruta: '/reportes',         etiqueta: 'Reportes' },
+];
+
+export function Sidebar({ visible }) {
+  return (
+    <nav className={`sidebar ${visible ? '' : 'sidebar-oculto'}`} aria-label="Navegación principal">
+      <div className="sidebar-logo">
+        <span className="sidebar-logo-icono" aria-hidden="true">M</span>
+        <span className="sidebar-logo-texto">Monitor</span>
+      </div>
+      <ul className="sidebar-menu" role="list">
+        {MENU.map((item) => (
+          <li key={item.ruta}>
+            <NavLink
+              to={item.ruta}
+              end={item.ruta === '/'}
+              className={({ isActive }) =>
+                `sidebar-enlace ${isActive ? 'sidebar-enlace-activo' : ''}`
+              }
+            >
+              {item.etiqueta}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}

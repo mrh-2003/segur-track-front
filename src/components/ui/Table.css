@@ -1,0 +1,58 @@
+.tabla-contenedor {
+  overflow-x: auto;
+  border-radius: var(--radio-md);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tam-sm);
+}
+
+.tabla-th {
+  text-align: left;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: var(--tam-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-texto-secundario);
+  background: var(--color-fondo-alt);
+  border-bottom: 1px solid var(--color-borde);
+  white-space: nowrap;
+}
+
+.tabla-tr {
+  border-bottom: 1px solid var(--color-borde-suave);
+  transition: background var(--transicion);
+}
+.tabla-tr:hover { background: var(--color-fondo-alt); }
+.tabla-tr:last-child { border-bottom: none; }
+
+.tabla-td {
+  padding: 12px 14px;
+  color: var(--color-texto-principal);
+  vertical-align: middle;
+}
+
+.tabla-vacio {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-texto-tenue);
+  font-size: var(--tam-sm);
+}
+
+.tabla-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.tabla-skeleton-fila {
+  height: 44px;
+  background: linear-gradient(90deg, var(--color-fondo-alt) 25%, var(--color-borde) 50%, var(--color-fondo-alt) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radio-md);
+}

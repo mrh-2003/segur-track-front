@@ -1,0 +1,83 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: fadeIn 150ms ease;
+}
+
+.modal-contenedor {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-xl);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 200ms ease;
+  outline: none;
+}
+
+.modal-formulario { max-width: 560px; }
+.modal-confirmacion { max-width: 440px; }
+.modal-informacion { max-width: 440px; }
+
+.modal-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.modal-titulo {
+  font-size: var(--tam-lg);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.modal-cerrar {
+  background: none;
+  border: none;
+  font-size: var(--tam-lg);
+  color: var(--color-texto-tenue);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radio-sm);
+  transition: background var(--transicion), color var(--transicion);
+}
+.modal-cerrar:hover { background: var(--color-fondo-alt); color: var(--color-texto-principal); }
+
+.modal-cuerpo {
+  padding: 20px 24px;
+}
+
+.modal-mensaje {
+  font-size: var(--tam-sm);
+  color: var(--color-texto-secundario);
+  line-height: 1.6;
+}
+
+.modal-info-exito   { color: var(--color-exito); }
+.modal-info-error   { color: var(--color-peligro); }
+.modal-info-advertencia { color: var(--color-advertencia); }
+
+.modal-pie {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 0 24px 20px;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

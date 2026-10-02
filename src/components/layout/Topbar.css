@@ -1,0 +1,128 @@
+.topbar {
+  position: fixed;
+  top: 0;
+  left: var(--ancho-sidebar);
+  right: 0;
+  height: var(--alto-topbar);
+  background: var(--color-topbar-bg);
+  border-bottom: 1px solid var(--color-topbar-borde);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 100;
+  gap: 16px;
+  transition: left var(--transicion);
+}
+
+.topbar-izquierda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar-derecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.topbar-menu-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--color-texto-secundario);
+  display: none;
+  padding: 4px;
+  border-radius: var(--radio-sm);
+}
+
+.topbar-buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-fondo-alt);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-full);
+  padding: 0 14px;
+  flex: 1;
+  max-width: 480px;
+  height: 38px;
+}
+
+.topbar-buscador-icono { font-size: var(--tam-sm); }
+
+.topbar-buscador-input {
+  background: none;
+  border: none;
+  outline: none;
+  font-size: var(--tam-sm);
+  color: var(--color-texto-principal);
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar-buscador-input::placeholder { color: var(--color-texto-tenue); }
+
+.topbar-tema-btn,
+.topbar-logout-btn {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  padding: 6px;
+  border-radius: var(--radio-md);
+  cursor: pointer;
+  color: var(--color-texto-secundario);
+  transition: background var(--transicion);
+}
+.topbar-tema-btn:hover,
+.topbar-logout-btn:hover {
+  background: var(--color-fondo-alt);
+  color: var(--color-texto-principal);
+}
+
+.topbar-usuario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-usuario-avatar {
+  width: 34px;
+  height: 34px;
+  background: var(--color-primario);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--tam-sm);
+  border-radius: var(--radio-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topbar-usuario-nombre {
+  font-size: var(--tam-sm);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+  white-space: nowrap;
+}
+
+.topbar-usuario-rol {
+  font-size: var(--tam-xs);
+  color: var(--color-texto-tenue);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    left: 0;
+    padding: 0 16px;
+  }
+  .topbar-menu-btn { display: flex; }
+  .topbar-buscador { max-width: 220px; }
+  .topbar-usuario-info { display: none; }
+}

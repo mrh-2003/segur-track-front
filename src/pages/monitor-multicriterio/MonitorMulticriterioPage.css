@@ -1,0 +1,88 @@
+.criterios-lista { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+
+.criterio-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.criterio-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.criterio-codigo {
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+  font-size: var(--tam-xs);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radio-full);
+}
+
+.criterio-nombre {
+  font-size: var(--tam-sm);
+  color: var(--color-texto-principal);
+}
+
+.criterio-peso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.criterio-barra-contenedor {
+  flex: 1;
+  height: 6px;
+  background: var(--color-fondo-alt);
+  border-radius: var(--radio-full);
+  overflow: hidden;
+}
+
+.criterio-barra {
+  height: 100%;
+  background: var(--color-primario);
+  border-radius: var(--radio-full);
+  transition: width 400ms ease;
+}
+
+.criterio-pct {
+  font-size: var(--tam-xs);
+  font-weight: 600;
+  color: var(--color-texto-secundario);
+  min-width: 36px;
+  text-align: right;
+}
+
+.detalle-criterios { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+
+.detalle-criterio-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.detalle-criterio-nombre { font-size: var(--tam-sm); }
+
+.detalle-criterio-pct { font-size: var(--tam-sm); font-weight: 700; }
+.pct-alerta { color: var(--color-peligro); }
+.pct-ok     { color: var(--color-exito); }
+
+.barra-detalle-contenedor {
+  height: 8px;
+  background: var(--color-fondo-alt);
+  border-radius: var(--radio-full);
+  overflow: hidden;
+}
+
+.barra-detalle {
+  height: 100%;
+  border-radius: var(--radio-full);
+  transition: width 400ms ease;
+}
+.barra-alerta { background: var(--color-peligro); }
+.barra-ok     { background: var(--color-exito); }
+
+.accion-btn { background: none; border: 1px solid var(--color-borde); border-radius: var(--radio-sm); padding: 4px 8px; cursor: pointer; font-size: var(--tam-xs); transition: background var(--transicion); color: var(--color-primario); }
+.accion-btn:hover { background: var(--color-primario-suave); }
