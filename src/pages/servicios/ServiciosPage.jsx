@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useLocation } from 'react-router-dom';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
 import {
   listarServicios, resumenServicios, obtenerServicio,
@@ -29,6 +30,7 @@ export default function ServiciosPage() {
   const [seleccionado, setSeleccionado] = useState(null);
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
+  const location = useLocation();
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -60,7 +62,7 @@ export default function ServiciosPage() {
     return () => clearTimeout(t);
   }, [cargar, filtros.q]);
 
-  const abrirFormulario = (item = null) => {
+  const abrirFormulario = useCallback((item = null) => {
     abrirModal({
       tipo: 'formulario',
       titulo: item ? 'Editar servicio' : 'Nuevo servicio',
@@ -86,7 +88,17 @@ export default function ServiciosPage() {
         />
       ),
     });
-  };
+  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, clientes, personal, sedes]);
+
+  useEffect(() => {
+    if (location.state?.abrirModal && clientes.length > 0) {
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => {
+        abrirFormulario();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, clientes.length, abrirFormulario]);
 
   const manejarVerDetalle = async (item) => {
     try {
@@ -95,6 +107,19 @@ export default function ServiciosPage() {
     } catch (err) {
       informar('Error', err.message, 'error');
     }
+  };
+
+  const manejarCambiarEstado = (item) => {
+    const siguiente = item.estado === 'programado' ? 'en_curso' : item.estado === 'en_curso' ? 'finalizado' : 'programado';
+    confirmar(`¿Cambiar estado de "${item.nombre}" a "${siguiente}"?`, async () => {
+      await ejecutar(async () => {
+        try {
+          await cambiarEstadoServicio(item.id, siguiente);
+          await cargar();
+          informar('Estado actualizado', `Servicio actualizado a ${siguiente}`, 'exito');
+        } catch (err) { informar('Error', err.message, 'error'); }
+      });
+    }, { titulo: 'Cambiar estado' });
   };
 
   const manejarEliminar = (item) => {
@@ -125,6 +150,7 @@ export default function ServiciosPage() {
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="accion-btn" onClick={() => manejarVerDetalle(f)} title="Ver detalle">👁️</button>
           <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">✏️</button>
+          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">🔄</button>
           <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">🗑️</button>
         </div>
       ),

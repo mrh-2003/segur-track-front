@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
-import { listarReportes, historialReportes, generarReporte } from '../../api/reportes';
+import { listarReportes, historialReportes, generarReporte, descargarReporte } from '../../api/reportes';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
+import FormExportar from './FormExportar';
 import './ReportesPage.css';
 
 const PESTANAS = ['operativos', 'incidencias', 'multicriterio'];
 
 export default function ReportesPage() {
   const [pestana, setPestana] = useState('operativos');
+  const [busqueda, setBusqueda] = useState('');
   const [reportes, setReportes] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -18,7 +20,6 @@ export default function ReportesPage() {
   const { cargando: cargandoExport, ejecutar } = useAsync();
 
   const cargar = useCallback(async () => {
-    setCargando(true);
     try {
       const [lista, hist] = await Promise.all([listarReportes(), historialReportes()]);
       setReportes(lista);
@@ -28,51 +29,60 @@ export default function ReportesPage() {
     }
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
-  const reportesFiltrados = reportes.filter((r) => r.categoria === pestana);
+  const reportesFiltrados = reportes.filter((r) => {
+    const coincideCategoria = r.categoria === pestana;
+    const coincideBusqueda = busqueda.trim()
+      ? r.tipo.toLowerCase().includes(busqueda.toLowerCase()) ||
+        r.formato.toLowerCase().includes(busqueda.toLowerCase())
+      : true;
+    return coincideCategoria && coincideBusqueda;
+  });
 
   const abrirExportar = () => {
-    let tipo = '', formato = '';
     abrirModal({
       tipo: 'formulario',
       titulo: 'Exportar reporte',
       contenido: (
-        <div>
-          <div className="form-grilla-1" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
-            <Select id="exp-tipo" label="Tipo de reporte" nombre="tipo"
-              valor={tipo} onChange={(e) => { tipo = e.target.value; }}
-              placeholder="Seleccionar tipo" requerido>
-              <option value="servicios">Servicios</option>
-              <option value="turnos">Turnos</option>
-              <option value="incidencias">Incidencias</option>
-              <option value="bi">Dashboard BI</option>
-              <option value="multicriterio">Multicriterio</option>
-            </Select>
-            <Select id="exp-formato" label="Formato" nombre="formato"
-              valor={formato} onChange={(e) => { formato = e.target.value; }}
-              placeholder="Seleccionar formato" requerido>
-              <option value="xlsx">Excel (XLSX)</option>
-              <option value="pdf">PDF</option>
-            </Select>
-          </div>
-          <div className="form-pie">
-            <Button variante="secundario" onClick={cerrarModal}>Cancelar</Button>
-            <Button variante="primario" cargando={cargandoExport} onClick={async () => {
-              await ejecutar(async () => {
-                try {
-                  const categoria = ['servicios', 'turnos'].includes(tipo) ? 'operativos'
-                    : tipo === 'incidencias' ? 'incidencias' : 'multicriterio';
-                  await generarReporte({ tipo, categoria, formato });
-                  cerrarModal();
-                  await cargar();
-                  informar('Reporte generado', 'El reporte fue generado correctamente', 'exito');
-                } catch (err) { informar('Error', err.message, 'error'); }
-              });
-            }}>Generar</Button>
-          </div>
-        </div>
+        <FormExportar
+          onGuardar={async (datos) => {
+            await ejecutar(async () => {
+              try {
+                await generarReporte(datos);
+                cerrarModal();
+                await cargar();
+                informar('Reporte generado', 'El reporte fue generado correctamente', 'exito');
+              } catch (err) {
+                informar('Error', err.message, 'error');
+              }
+            });
+          }}
+          onCancelar={cerrarModal}
+          cargando={cargandoExport}
+        />
       ),
+    });
+  };
+
+  const manejarDescargar = async (id, nombre, formato) => {
+    await ejecutar(async () => {
+      try {
+        const respuesta = await descargarReporte(id);
+        const blob = new Blob([JSON.stringify(respuesta, null, 2)], { type: 'text/plain' });
+        const enlace = document.createElement('a');
+        enlace.href = URL.createObjectURL(blob);
+        enlace.download = `reporte_${nombre}_${id}.${formato}`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        URL.revokeObjectURL(enlace.href);
+        informar('Descarga iniciada', `El reporte "${nombre}" se ha descargado correctamente.`, 'exito');
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
     });
   };
 
@@ -88,13 +98,27 @@ export default function ReportesPage() {
 
       <div className="grilla-contenido grilla-2-1">
         <div className="tarjeta">
-          <div className="reportes-pestanas">
-            {PESTANAS.map((p) => (
-              <button key={p} className={`reportes-pestana ${pestana === p ? 'reportes-pestana-activa' : ''}`}
-                onClick={() => setPestana(p)}>
-                {p.charAt(0).toUpperCase() + p.slice(1)}
-              </button>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div className="reportes-pestanas" style={{ marginBottom: 0 }}>
+              {PESTANAS.map((p) => (
+                <button
+                  key={p}
+                  className={`reportes-pestana ${pestana === p ? 'reportes-pestana-activa' : ''}`}
+                  onClick={() => setPestana(p)}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div style={{ width: 220 }}>
+              <Input
+                id="buscar-reportes"
+                nombre="busqueda"
+                placeholder="Buscar reporte..."
+                valor={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
           </div>
 
           {cargando ? (
@@ -113,7 +137,12 @@ export default function ReportesPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Badge valor={r.estado} />
-                    <button className="accion-btn">⬇ Descargar</button>
+                    <button
+                      className="accion-btn"
+                      onClick={() => manejarDescargar(r.id, r.tipo, r.formato)}
+                    >
+                      ⬇ Descargar
+                    </button>
                   </div>
                 </div>
               ))}
@@ -128,12 +157,16 @@ export default function ReportesPage() {
               <div key={i} className="historial-item">
                 <div>
                   <p style={{ fontSize: 'var(--tam-sm)', fontWeight: 600 }}>{h.tipo}</p>
-                  <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>{h.generado_por} · {new Date(h.creado_en).toLocaleString('es-PE')}</p>
+                  <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>
+                    {h.generado_por} · {new Date(h.creado_en).toLocaleString('es-PE')}
+                  </p>
                 </div>
                 <Badge valor={h.estado} />
               </div>
             ))}
-            {historial.length === 0 && <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-tenue)' }}>Sin historial</p>}
+            {historial.length === 0 && (
+              <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-tenue)' }}>Sin historial</p>
+            )}
           </div>
         </div>
       </div>

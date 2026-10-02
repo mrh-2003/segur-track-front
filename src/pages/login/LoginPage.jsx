@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useModal } from '../../context/ModalContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useModal } from '../../hooks/useModal';
 import { useForm } from '../../hooks/useForm';
 import { useAsync } from '../../hooks/useAsync';
 import { login } from '../../api/auth';

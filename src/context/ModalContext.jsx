@@ -1,6 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-
-const ModalContext = createContext(null);
+import { useState, useCallback } from 'react';
+import { ModalContext } from './modal.context';
 
 export function ModalProvider({ children }) {
   const [modal, setModal] = useState(null);
@@ -34,8 +33,4 @@ export function ModalProvider({ children }) {
       {children}
     </ModalContext.Provider>
   );
-}
-
-export function useModal() {
-  return useContext(ModalContext);
 }

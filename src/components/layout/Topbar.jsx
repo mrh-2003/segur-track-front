@@ -1,16 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
 import { logout } from '../../api/auth';
+import { listarPersonal } from '../../api/personal';
+import { listarServicios } from '../../api/servicios';
+import { listarIncidencias } from '../../api/incidencias';
 import './Topbar.css';
+
+const DEBOUNCE_MS = 300;
 
 export function Topbar({ onToggleSidebar }) {
   const { usuario, cerrarSesion } = useAuth();
   const { tema, alternarTema } = useTheme();
   const [busqueda, setBusqueda] = useState('');
+  const [resultados, setResultados] = useState({ personal: [], servicios: [], incidencias: [] });
+  const [buscando, setBuscando] = useState(false);
+  const [mostrarResultados, setMostrarResultados] = useState(false);
   const navigate = useNavigate();
-  const inputRef = useRef(null);
+  const contenedorRef = useRef(null);
 
   const manejarLogout = async () => {
     await logout().catch(() => {});
@@ -18,12 +26,52 @@ export function Topbar({ onToggleSidebar }) {
     navigate('/login');
   };
 
-  const manejarBusqueda = (e) => {
-    if (e.key === 'Enter' && busqueda.trim()) {
-      navigate(`/buscar?q=${encodeURIComponent(busqueda.trim())}`);
-      setBusqueda('');
-    }
+  useEffect(() => {
+    const termino = busqueda.trim();
+    if (termino.length < 2) return;
+
+    const t = setTimeout(async () => {
+      setBuscando(true);
+      try {
+        const [pers, serv, inc] = await Promise.all([
+          listarPersonal({ q: termino }),
+          listarServicios({ q: termino }),
+          listarIncidencias({ q: termino }),
+        ]);
+        setResultados({
+          personal: (pers || []).slice(0, 3),
+          servicios: (serv || []).slice(0, 3),
+          incidencias: (inc || []).slice(0, 3),
+        });
+        setMostrarResultados(true);
+      } catch {
+        setResultados({ personal: [], servicios: [], incidencias: [] });
+      } finally {
+        setBuscando(false);
+      }
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
+  useEffect(() => {
+    const clickAfuera = (e) => {
+      if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
+        setMostrarResultados(false);
+      }
+    };
+    document.addEventListener('mousedown', clickAfuera);
+    return () => document.removeEventListener('mousedown', clickAfuera);
+  }, []);
+
+  const seleccionar = (ruta) => {
+    setMostrarResultados(false);
+    setBusqueda('');
+    navigate(ruta);
   };
+
+  const totalResultados =
+    resultados.personal.length + resultados.servicios.length + resultados.incidencias.length;
 
   return (
     <header className="topbar" role="banner">
@@ -35,18 +83,106 @@ export function Topbar({ onToggleSidebar }) {
         >
           ☰
         </button>
-        <div className="topbar-buscador">
-          <span className="topbar-buscador-icono" aria-hidden="true">🔍</span>
-          <input
-            ref={inputRef}
-            type="search"
-            placeholder="Buscar personal, servicios o incidencias..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={manejarBusqueda}
-            className="topbar-buscador-input"
-            aria-label="Buscador global"
-          />
+        <div className="topbar-buscador-contenedor" ref={contenedorRef}>
+          <div className="topbar-buscador">
+            <span className="topbar-buscador-icono" aria-hidden="true">🔍</span>
+            <input
+              type="search"
+              placeholder="Buscar personal, servicios o incidencias..."
+              value={busqueda}
+              onChange={(e) => {
+                const valor = e.target.value;
+                setBusqueda(valor);
+                if (valor.trim().length < 2) {
+                  setResultados({ personal: [], servicios: [], incidencias: [] });
+                  setMostrarResultados(false);
+                }
+              }}
+              onFocus={() => {
+                if (busqueda.trim().length >= 2) setMostrarResultados(true);
+              }}
+              className="topbar-buscador-input"
+              aria-label="Buscador global"
+            />
+            {buscando && <span className="topbar-spinner-inline" />}
+          </div>
+
+          {mostrarResultados && (
+            <div className="topbar-resultados-dropdown">
+              {totalResultados === 0 && !buscando ? (
+                <div className="topbar-resultado-vacio">
+                  Sin resultados para "{busqueda}"
+                </div>
+              ) : (
+                <div className="topbar-resultado-secciones">
+                  {resultados.personal.length > 0 && (
+                    <div className="topbar-seccion">
+                      <div className="topbar-seccion-titulo">Personal</div>
+                      {resultados.personal.map((p) => (
+                        <button
+                          key={p.id}
+                          className="topbar-resultado-item"
+                          onClick={() => seleccionar('/personal')}
+                        >
+                          <span className="topbar-resultado-icono">👤</span>
+                          <div className="topbar-resultado-datos">
+                            <span className="topbar-resultado-nombre">
+                              {p.nombres} {p.apellidos}
+                            </span>
+                            <span className="topbar-resultado-sub">
+                              {p.cargo} · {p.documento}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {resultados.servicios.length > 0 && (
+                    <div className="topbar-seccion">
+                      <div className="topbar-seccion-titulo">Servicios</div>
+                      {resultados.servicios.map((s) => (
+                        <button
+                          key={s.id}
+                          className="topbar-resultado-item"
+                          onClick={() => seleccionar('/servicios')}
+                        >
+                          <span className="topbar-resultado-icono">🛡️</span>
+                          <div className="topbar-resultado-datos">
+                            <span className="topbar-resultado-nombre">{s.nombre}</span>
+                            <span className="topbar-resultado-sub">
+                              {s.cliente_nombre || 'Cliente'} · {s.estado}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {resultados.incidencias.length > 0 && (
+                    <div className="topbar-seccion">
+                      <div className="topbar-seccion-titulo">Incidencias</div>
+                      {resultados.incidencias.map((inc) => (
+                        <button
+                          key={inc.id}
+                          className="topbar-resultado-item"
+                          onClick={() => seleccionar('/incidencias')}
+                        >
+                          <span className="topbar-resultado-icono">⚠️</span>
+                          <div className="topbar-resultado-datos">
+                            <span className="topbar-resultado-nombre">{inc.codigo}</span>
+                            <span className="topbar-resultado-sub">
+                              {inc.tipo_nombre || inc.descripcion?.slice(0, 35)}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

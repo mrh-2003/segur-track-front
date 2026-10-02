@@ -1,15 +1,14 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { obtenerPerfil } from '../api/auth';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './auth.context';
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(() => Boolean(localStorage.getItem('token')));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { setCargando(false); return; }
+    if (!token) return;
     obtenerPerfil()
       .then((u) => setUsuario(u))
       .catch(() => localStorage.removeItem('token'))
@@ -31,8 +30,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

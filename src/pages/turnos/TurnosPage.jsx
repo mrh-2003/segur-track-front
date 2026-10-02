@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useLocation } from 'react-router-dom';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
 import {
   listarTurnos, resumenTurnos, alertasTurnos,
@@ -8,10 +9,8 @@ import {
 import { listarPersonal } from '../../api/personal';
 import { listarServicios } from '../../api/servicios';
 import { KpiCard } from '../../components/ui/KpiCard';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
-import { Input } from '../../components/ui/Input';
 import FormTurno from './FormTurno';
 import './TurnosPage.css';
 
@@ -47,11 +46,11 @@ export default function TurnosPage() {
   const [cargando, setCargando] = useState(true);
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
+  const location = useLocation();
 
   const semana = obtenerSemana(semanaBase);
 
   const cargar = useCallback(async () => {
-    setCargando(true);
     try {
       const params = { desde: semana.desde, hasta: semana.hasta };
       if (sedeId) params.sedeId = sedeId;
@@ -75,9 +74,11 @@ export default function TurnosPage() {
     }
   }, [semana.desde, semana.hasta, sedeId]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
-  const abrirFormulario = () => {
+  const abrirFormulario = useCallback(() => {
     abrirModal({
       tipo: 'formulario',
       titulo: 'Asignar turno',
@@ -101,7 +102,17 @@ export default function TurnosPage() {
         />
       ),
     });
-  };
+  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, personal, servicios, sedes]);
+
+  useEffect(() => {
+    if (location.state?.abrirModal && personal.length > 0) {
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => {
+        abrirFormulario();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, personal.length, abrirFormulario]);
 
   const manejarConfirmar = (turno) => {
     confirmar(`¿Confirmar el turno de ${turno.personal}?`, async () => {

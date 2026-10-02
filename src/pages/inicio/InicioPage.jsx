@@ -2,16 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resumenInicio, actividadOperativa, actividadReciente } from '../../api/inicio';
 import { KpiCard } from '../../components/ui/KpiCard';
-import { Button } from '../../components/ui/Button';
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../hooks/useModal';
 import GraficoActividadOperativa from './GraficoActividadOperativa';
 import './InicioPage.css';
 
 const ACCESOS = [
-  { label: 'Nuevo personal',    ruta: '/personal',    emoji: '👤' },
-  { label: 'Asignar turno',     ruta: '/turnos',      emoji: '🗓️' },
-  { label: 'Registrar incidencia', ruta: '/incidencias', emoji: '⚠️' },
-  { label: 'Ver servicios',     ruta: '/servicios',   emoji: '🛡️' },
+  { label: 'Nuevo personal',       ruta: '/personal',    modal: true,  emoji: '👤' },
+  { label: 'Asignar turno',        ruta: '/turnos',      modal: true,  emoji: '🗓️' },
+  { label: 'Registrar incidencia', ruta: '/incidencias', modal: true,  emoji: '⚠️' },
+  { label: 'Ver servicios',        ruta: '/servicios',   modal: false, emoji: '🛡️' },
 ];
 
 export default function InicioPage() {
@@ -23,24 +22,29 @@ export default function InicioPage() {
   const { informar } = useModal();
 
   useEffect(() => {
-    const cargar = async () => {
+    let activo = true;
+    (async () => {
       try {
         const [res, act, rec] = await Promise.all([
           resumenInicio(),
           actividadOperativa(),
           actividadReciente(),
         ]);
-        setResumen(res);
-        setActividad(act);
-        setRecientes(rec);
+        if (activo) {
+          setResumen(res);
+          setActividad(act);
+          setRecientes(rec);
+        }
       } catch (err) {
-        informar('Error', err.message, 'error');
+        if (activo) informar('Error', err.message, 'error');
       } finally {
-        setCargando(false);
+        if (activo) setCargando(false);
       }
+    })();
+    return () => {
+      activo = false;
     };
-    cargar();
-  }, []);
+  }, [informar]);
 
   return (
     <div className="fade-in">
@@ -69,7 +73,11 @@ export default function InicioPage() {
           <h3 className="tarjeta-titulo">Accesos rápidos</h3>
           <div className="accesos-grid">
             {ACCESOS.map((a) => (
-              <button key={a.ruta} className="acceso-btn" onClick={() => navigate(a.ruta)}>
+              <button
+                key={a.ruta}
+                className="acceso-btn"
+                onClick={() => navigate(a.ruta, a.modal ? { state: { abrirModal: true } } : undefined)}
+              >
                 <span className="acceso-emoji">{a.emoji}</span>
                 <span className="acceso-label">{a.label}</span>
               </button>

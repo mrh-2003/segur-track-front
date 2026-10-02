@@ -1,16 +1,51 @@
-# React + Vite
+# Segur Track — Frontend Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web React + Vite para el sistema de monitoreo operativo Segur Track.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 18 o superior
+- npm 9 o superior
+- Backend `segur-track-back` ejecutándose en el puerto 3001
 
-## React Compiler
+## Variables de Entorno
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Crear un archivo `.env` en la raíz de `segur-track-front` basado en `.env.example`:
 
-## Expanding the ESLint configuration
+```env
+VITE_API_URL=http://localhost:3001/api/v1
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Ejecución del Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+La aplicación estará disponible en `http://localhost:5173`.
+
+Para validar estilo y reglas de código:
+```bash
+npm run lint
+```
+
+## Credenciales Iniciales
+
+- Administrador: `admin@segurtrack.pe` / `Admin1234`
+- Supervisor: `supervisor@segurtrack.pe` / `Supervisor1234`
+- Operador: `operador@segurtrack.pe` / `Operador1234`
+
+## Módulos y Características
+
+- **Inicio**: KPIs con variaciones, gráfico SVG de actividad operativa 24h, accesos rápidos y registro de actividad reciente.
+- **Personal**: Gestión de supervisores y agentes con KPIs, filtros por estado, búsqueda en tiempo real, cambio de estado y eliminación lógica con confirmación Modal.
+- **Turnos**: Planificación semanal con selector de fechas, visualización por franjas horarias con chips de color, panel de alertas del día y asignación con prevención de solapamientos.
+- **Servicios**: Control de servicios activos y finalizados, panel de detalle rápido lateral y gestión de supervisores asignados.
+- **Incidencias**: Registro de eventos con código autogenerado (`INC-0001`), prioridad, flujo de estados (abierta, en atención, cerrada) y panel de incidencias recientes.
+- **Dashboard BI**: Indicadores operativos clave, evolución de cumplimiento semanal con gráfico de 2 líneas SVG, distribución de incidencias con gráfico de dona SVG, tabla de desempeño y visor de reporte Power BI embebido.
+- **Monitor Multicriterio**: Evaluación MCDA con método de suma ponderada de 5 criterios normalizados, clasificación en niveles de atención (alta, media, baja), identificación de criterios influyentes y editor modal de pesos para administradores.
+- **Reportes**: Generación y exportación de reportes en formatos Excel (XLSX) y PDF, segmentados por categorías operativas, incidencias y multicriterio, con historial de generación.
+- **Tema Oscuro y Claro**: Selector dinámico en la barra superior con variables CSS armoniosas y contraste adecuado en ambos modos.
+- **Buscador Global**: Búsqueda integrada en la cabecera sobre personal, servicios e incidencias con retraso optimizado de 300 ms.
+- **Modales y Diálogos**: Todos los mensajes informativos, de error, confirmaciones y formularios se gestionan mediante el componente Modal accesible (`aria-modal`, cierre con Esc, trampeo de foco).

@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useState, useEffect } from 'react';
+import { useModal } from '../../hooks/useModal';
 import {
   indicadoresBi, evolucionCumplimiento,
   incidenciasPorTipo, desempenoPorServicio, embedBi,
 } from '../../api/bi';
-import { listarClientes } from '../../api/servicios';
-import { listarServicios } from '../../api/servicios';
+import { listarClientes, listarServicios } from '../../api/servicios';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Select } from '../../components/ui/Select';
 import GraficoLineas from './GraficoLineas';
@@ -22,43 +21,53 @@ const PERIODOS = [
 export default function DashboardBIPage() {
   const [periodo, setPeriodo] = useState('30');
   const [clienteId, setClienteId] = useState('');
+  const [servicioId, setServicioId] = useState('');
   const [indicadores, setIndicadores] = useState(null);
   const [evolucion, setEvolucion] = useState([]);
   const [porTipo, setPorTipo] = useState([]);
   const [desempeno, setDesempeno] = useState([]);
   const [embedUrl, setEmbedUrl] = useState('');
   const [clientes, setClientes] = useState([]);
+  const [servicios, setServicios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const { informar } = useModal();
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const params = { periodo };
-      if (clienteId) params.clienteId = clienteId;
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const params = { periodo };
+        if (clienteId) params.clienteId = clienteId;
+        if (servicioId) params.servicioId = servicioId;
 
-      const [ind, evol, tipo, desemp, embed, listClientes] = await Promise.all([
-        indicadoresBi(params),
-        evolucionCumplimiento(),
-        incidenciasPorTipo(),
-        desempenoPorServicio(),
-        embedBi().catch(() => ({ url: '' })),
-        listarClientes(),
-      ]);
-      setIndicadores(ind);
-      setEvolucion(evol);
-      setPorTipo(tipo);
-      setDesempeno(desemp);
-      setEmbedUrl(embed?.url || '');
-      setClientes(listClientes);
-    } catch (err) {
-      informar('Error', err.message, 'error');
-    } finally {
-      setCargando(false);
-    }
-  }, [periodo, clienteId]);
-
-  useEffect(() => { cargar(); }, [cargar]);
+        const [ind, evol, tipo, desemp, embed, listClientes, listServicios] = await Promise.all([
+          indicadoresBi(params),
+          evolucionCumplimiento(),
+          incidenciasPorTipo(),
+          desempenoPorServicio(),
+          embedBi().catch(() => ({ url: '' })),
+          listarClientes(),
+          listarServicios(),
+        ]);
+        if (activo) {
+          setIndicadores(ind);
+          setEvolucion(evol);
+          setPorTipo(tipo);
+          setDesempeno(desemp);
+          setEmbedUrl(embed?.url || '');
+          setClientes(listClientes);
+          setServicios(listServicios);
+        }
+      } catch (err) {
+        if (activo) informar('Error', err.message, 'error');
+      } finally {
+        if (activo) setCargando(false);
+      }
+    })();
+    return () => {
+      activo = false;
+    };
+  }, [periodo, clienteId, servicioId, informar]);
 
   return (
     <div className="fade-in">
@@ -75,6 +84,10 @@ export default function DashboardBIPage() {
           <Select id="filtro-cliente-bi" nombre="clienteId" valor={clienteId}
             onChange={(e) => setClienteId(e.target.value)} placeholder="Todos los clientes">
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </Select>
+          <Select id="filtro-servicio-bi" nombre="servicioId" valor={servicioId}
+            onChange={(e) => setServicioId(e.target.value)} placeholder="Todos los servicios">
+            {servicios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </Select>
         </div>
       </div>
@@ -104,7 +117,7 @@ export default function DashboardBIPage() {
       </div>
 
       {embedUrl ? (
-        <div className="tarjeta" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="tarjeta" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
           <h3 className="tarjeta-titulo" style={{ padding: '16px 20px 0' }}>Informe Power BI</h3>
           <iframe
             title="Power BI Report"
@@ -117,7 +130,14 @@ export default function DashboardBIPage() {
         </div>
       ) : (
         <div className="tarjeta embed-placeholder">
-          <p>El informe de Power BI no está configurado. Configure <code>POWER_BI_EMBED_URL</code> en el backend.</p>
+          <p style={{ marginBottom: 12 }}>El informe de Power BI no está configurado en el servidor.</p>
+          <button
+            type="button"
+            className="accion-btn"
+            onClick={() => informar('Power BI no configurado', 'La variable de entorno POWER_BI_EMBED_URL no está configurada en el backend. Configure dicha variable en .env para visualizar el informe embebido.', 'advertencia')}
+          >
+            Verificar configuración
+          </button>
         </div>
       )}
     </div>

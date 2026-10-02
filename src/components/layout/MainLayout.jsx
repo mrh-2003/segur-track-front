@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { Modal } from '../ui/Modal';
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../hooks/useModal';
 
 export function MainLayout() {
   const [sidebarVisible, setSidebarVisible] = useState(true);

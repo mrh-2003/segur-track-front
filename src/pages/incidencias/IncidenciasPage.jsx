@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useLocation } from 'react-router-dom';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
 import {
   listarIncidencias, resumenIncidencias, incidenciasRecientes,
@@ -28,6 +29,7 @@ export default function IncidenciasPage() {
   const [filtros, setFiltros] = useState({ q: '', tipoId: '', estado: '' });
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
+  const location = useLocation();
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -59,7 +61,7 @@ export default function IncidenciasPage() {
     return () => clearTimeout(t);
   }, [cargar, filtros.q]);
 
-  const abrirFormulario = (item = null) => {
+  const abrirFormulario = useCallback((item = null) => {
     abrirModal({
       tipo: 'formulario',
       titulo: item ? 'Editar incidencia' : 'Registrar incidencia',
@@ -84,7 +86,17 @@ export default function IncidenciasPage() {
         />
       ),
     });
-  };
+  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, tipos, servicios]);
+
+  useEffect(() => {
+    if (location.state?.abrirModal && tipos.length > 0 && servicios.length > 0) {
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => {
+        abrirFormulario();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, tipos.length, servicios.length, abrirFormulario]);
 
   const manejarCambiarEstado = (item, estado) => {
     confirmar(

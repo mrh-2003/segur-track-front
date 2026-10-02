@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useLocation } from 'react-router-dom';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
-import { useForm } from '../../hooks/useForm';
 import {
   listarPersonal, resumenPersonal, crearPersonal,
   actualizarPersonal, cambiarEstadoPersonal, eliminarPersonal, listarSedes,
@@ -52,10 +52,9 @@ export default function PersonalPage() {
   const { personal, resumen, sedes, cargando, filtros, setFiltros, cargar } = useDatos();
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
-  const [seleccionado, setSeleccionado] = useState(null);
+  const location = useLocation();
 
-  const abrirFormulario = (item = null) => {
-    setSeleccionado(item);
+  const abrirFormulario = useCallback((item = null) => {
     abrirModal({
       tipo: 'formulario',
       titulo: item ? 'Editar personal' : 'Nuevo personal',
@@ -84,7 +83,17 @@ export default function PersonalPage() {
         />
       ),
     });
-  };
+  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, sedes]);
+
+  useEffect(() => {
+    if (location.state?.abrirModal) {
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => {
+        abrirFormulario();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, abrirFormulario]);
 
   const manejarEliminar = (item) => {
     confirmar(

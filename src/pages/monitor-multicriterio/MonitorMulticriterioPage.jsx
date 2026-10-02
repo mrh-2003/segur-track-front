@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import {
   listarCriterios, actualizarPesosCriterios,
   evaluarServicio, resultadoMulticriterio, detalleServicioMcda,
@@ -26,7 +26,6 @@ export default function MonitorMulticriterioPage() {
   const { cargando: cargandoAccion, ejecutar } = useAsync();
 
   const cargar = useCallback(async () => {
-    setCargando(true);
     try {
       const [c, r, s] = await Promise.all([
         listarCriterios(),
@@ -41,7 +40,9 @@ export default function MonitorMulticriterioPage() {
     }
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
   const manejarEvaluar = async () => {
     if (!servicioSelId) { informar('Aviso', 'Seleccione un servicio para evaluar', 'advertencia'); return; }
