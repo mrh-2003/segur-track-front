@@ -8,16 +8,50 @@ import {
   eliminarIncidencia, listarTiposIncidencia,
 } from '../../api/incidencias';
 import { listarServicios } from '../../api/servicios';
+import { descargarDirecto } from '../../api/reportes';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Table } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Icono } from '../../components/ui/Icono';
+import { formatearFechaHora } from '../../utils/fechas';
 import FormIncidencia from './FormIncidencia';
 import './IncidenciasPage.css';
 
 const DEBOUNCE_MS = 300;
+
+function PanelRecientes({ items, cargando }) {
+  return (
+    <div className="tarjeta">
+      <h3 className="tarjeta-titulo">Incidencias recientes</h3>
+      {cargando ? (
+        <p style={{ color: 'var(--color-texto-tenue)', padding: '16px 0', fontSize: 'var(--tam-sm)' }}>Cargando...</p>
+      ) : items.length === 0 ? (
+        <p style={{ color: 'var(--color-texto-tenue)', padding: '16px 0', fontSize: 'var(--tam-sm)' }}>Sin incidencias recientes</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+          {items.map((item) => (
+            <div key={item.codigo} className="incidencia-reciente-item">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, fontSize: 'var(--tam-sm)' }}>{item.codigo}</span>
+                <Badge valor={item.prioridad} />
+              </div>
+              <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-secundario)', margin: '4px 0' }}>
+                {item.tipo}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>
+                <span>{item.personal_registra || 'Sistema'}</span>
+                <span>{formatearFechaHora(item.fecha_registro)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function IncidenciasPage() {
   const [incidencias, setIncidencias] = useState([]);
@@ -39,7 +73,7 @@ export default function IncidenciasPage() {
       if (filtros.tipoId) params.tipoId = filtros.tipoId;
       if (filtros.estado) params.estado = filtros.estado;
 
-      const [lista, res, listRecientes, listTipos, listServicios] = await Promise.all([
+      const [lista, res, rec, listaTipos, listaServicios] = await Promise.all([
         listarIncidencias(params),
         resumenIncidencias(),
         incidenciasRecientes(),
@@ -48,9 +82,9 @@ export default function IncidenciasPage() {
       ]);
       setIncidencias(lista);
       setResumen(res);
-      setRecientes(listRecientes);
-      setTipos(listTipos);
-      setServicios(listServicios);
+      setRecientes(rec);
+      setTipos(listaTipos);
+      setServicios(listaServicios);
     } finally {
       setCargando(false);
     }
@@ -73,12 +107,17 @@ export default function IncidenciasPage() {
           onGuardar={async (datos) => {
             await ejecutar(async () => {
               try {
-                if (item) await actualizarIncidencia(item.id, datos);
-                else await crearIncidencia(datos);
+                if (item) {
+                  await actualizarIncidencia(item.id, datos);
+                } else {
+                  await crearIncidencia(datos);
+                }
                 cerrarModal();
                 await cargar();
-                informar('Operación exitosa', item ? 'Incidencia actualizada' : 'Incidencia registrada', 'exito');
-              } catch (err) { informar('Error', err.message, 'error'); }
+                informar('Operación exitosa', item ? 'Incidencia actualizada correctamente' : 'Incidencia registrada correctamente', 'exito');
+              } catch (err) {
+                informar('Error', err.message, 'error');
+              }
             });
           }}
           onCancelar={cerrarModal}
@@ -89,64 +128,81 @@ export default function IncidenciasPage() {
   }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, tipos, servicios]);
 
   useEffect(() => {
-    if (location.state?.abrirModal && tipos.length > 0 && servicios.length > 0) {
+    if (location.state?.abrirModal && tipos.length > 0) {
       window.history.replaceState({}, document.title);
       const timer = setTimeout(() => {
         abrirFormulario();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [location.state, tipos.length, servicios.length, abrirFormulario]);
+  }, [location.state, tipos.length, abrirFormulario]);
 
-  const manejarCambiarEstado = (item, estado) => {
-    confirmar(
-      `¿Cambiar estado de ${item.codigo} a "${estado}"?`,
-      async () => {
-        await ejecutar(async () => {
-          try {
-            await cambiarEstadoIncidencia(item.id, estado);
-            await cargar();
-          } catch (err) { informar('Error', err.message, 'error'); }
-        });
-      },
-      { titulo: 'Cambiar estado de incidencia' }
-    );
+  const manejarCambiarEstado = (item, nuevoEstado) => {
+    confirmar(`¿Cambiar estado de ${item.codigo} a "${nuevoEstado}"?`, async () => {
+      await ejecutar(async () => {
+        try {
+          await cambiarEstadoIncidencia(item.id, nuevoEstado);
+          await cargar();
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
+      });
+    }, { titulo: 'Cambiar estado' });
   };
 
   const manejarEliminar = (item) => {
-    confirmar(
-      `¿Eliminar la incidencia ${item.codigo}?`,
-      async () => {
-        await ejecutar(async () => {
-          try {
-            await eliminarIncidencia(item.id);
-            await cargar();
-          } catch (err) { informar('Error', err.message, 'error'); }
-        });
-      },
-      { titulo: 'Eliminar incidencia', variante: 'peligro' }
-    );
+    confirmar(`¿Eliminar la incidencia ${item.codigo}?`, async () => {
+      await ejecutar(async () => {
+        try {
+          await eliminarIncidencia(item.id);
+          await cargar();
+          informar('Eliminado', 'Incidencia eliminada correctamente', 'exito');
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
+      });
+    }, { titulo: 'Eliminar incidencia', variante: 'peligro' });
+  };
+
+  const exportarIncidencias = async (formato) => {
+    await ejecutar(async () => {
+      try {
+        const nombre = await descargarDirecto('incidencias', formato);
+        informar('Descarga exitosa', `El reporte "${nombre}" se descargó correctamente`, 'exito');
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
+    });
   };
 
   const columnas = [
-    { llave: 'codigo',   titulo: 'Código', render: (f) => <strong>{f.codigo}</strong> },
-    { llave: 'tipo',     titulo: 'Tipo' },
+    { llave: 'codigo', titulo: 'Código', render: (f) => <strong>{f.codigo}</strong> },
+    { llave: 'tipo', titulo: 'Tipo' },
     { llave: 'servicio', titulo: 'Servicio' },
-    { llave: 'fecha_registro', titulo: 'Fecha', render: (f) => new Date(f.fecha_registro).toLocaleDateString('es-PE') },
-    { llave: 'estado',   titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
+    { llave: 'personal_registra', titulo: 'Registrado por', render: (f) => f.personal_registra || '—' },
+    { llave: 'fecha_registro', titulo: 'Fecha y hora', render: (f) => formatearFechaHora(f.fecha_registro) },
     { llave: 'prioridad', titulo: 'Prioridad', render: (f) => <Badge valor={f.prioridad} /> },
+    { llave: 'estado', titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
         <div style={{ display: 'flex', gap: 6 }}>
           {f.estado === 'abierta' && (
-            <button className="accion-btn" onClick={() => manejarCambiarEstado(f, 'en_atencion')} title="Atender">▶</button>
+            <button className="accion-btn" onClick={() => manejarCambiarEstado(f, 'en_atencion')} title="Atender">
+              <Icono nombre="play" tamano={13} />
+            </button>
           )}
           {f.estado === 'en_atencion' && (
-            <button className="accion-btn" onClick={() => manejarCambiarEstado(f, 'cerrada')} title="Cerrar">✓</button>
+            <button className="accion-btn" onClick={() => manejarCambiarEstado(f, 'cerrada')} title="Cerrar">
+              <Icono nombre="confirmar" tamano={13} />
+            </button>
           )}
-          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">✏️</button>
-          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">🗑️</button>
+          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
+            <Icono nombre="editar" tamano={13} />
+          </button>
+          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">
+            <Icono nombre="eliminar" tamano={13} />
+          </button>
         </div>
       ),
     },
@@ -157,9 +213,17 @@ export default function IncidenciasPage() {
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Incidencias</h1>
-          <p className="pagina-subtitulo">Registro y seguimiento de incidencias</p>
+          <p className="pagina-subtitulo">Registro y seguimiento de incidencias operativas</p>
         </div>
-        <Button variante="primario" onClick={() => abrirFormulario()}>+ Registrar</Button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button variante="secundario" onClick={() => exportarIncidencias('xlsx')}>
+            <Icono nombre="descargar" tamano={14} /> Exportar Excel
+          </Button>
+          <Button variante="secundario" onClick={() => exportarIncidencias('pdf')}>
+            <Icono nombre="descargar" tamano={14} /> Exportar PDF
+          </Button>
+          <Button variante="primario" onClick={() => abrirFormulario()}>+ Registrar</Button>
+        </div>
       </div>
 
       <div className="grilla-kpi grilla-kpi-3">
@@ -189,22 +253,7 @@ export default function IncidenciasPage() {
           <Table columnas={columnas} datos={incidencias} cargando={cargando} vacio="Sin incidencias registradas" />
         </div>
 
-        <div className="tarjeta">
-          <h3 className="tarjeta-titulo">Incidencias recientes</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-            {recientes.map((r, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-borde)' }}>
-                <div>
-                  <p style={{ fontSize: 'var(--tam-sm)', fontWeight: 600 }}>{r.tipo}</p>
-                  <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>
-                    {new Date(r.fecha_registro).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <Badge valor={r.prioridad} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <PanelRecientes items={recientes} cargando={cargando} />
       </div>
     </div>
   );

@@ -10,32 +10,34 @@ const validar = (v) => {
 };
 
 export default function FormExportar({ onGuardar, onCancelar, cargando }) {
-  const { valores, errores, cambiando, validando, manejarEnvio } = useForm(
+  const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     { tipo: '', formato: '' },
     validar
   );
 
-  const alEnviar = (v) => {
-    const categoria = ['servicios', 'turnos'].includes(v.tipo)
+  const manejarSubmit = (e) => {
+    e.preventDefault();
+    if (!validarTodo()) return;
+    const categoria = ['servicios', 'turnos'].includes(valores.tipo)
       ? 'operativos'
-      : v.tipo === 'incidencias'
+      : valores.tipo === 'incidencias'
       ? 'incidencias'
       : 'multicriterio';
-    onGuardar({ ...v, categoria });
+    onGuardar({ ...valores, categoria });
   };
 
   return (
-    <form onSubmit={manejarEnvio(alEnviar)} noValidate>
-      <div className="form-grilla-1" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
+    <form onSubmit={manejarSubmit} noValidate>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
         <Select
           id="exp-tipo"
           label="Tipo de reporte"
           nombre="tipo"
           valor={valores.tipo}
-          onChange={cambiando('tipo')}
-          onBlur={validando('tipo')}
+          onChange={manejarCambio}
+          onBlur={manejarBlur}
           error={errores.tipo}
-          placeholder="Seleccionar tipo"
+          placeholder="Seleccionar tipo de reporte"
           requerido
         >
           <option value="servicios">Servicios</option>
@@ -47,17 +49,17 @@ export default function FormExportar({ onGuardar, onCancelar, cargando }) {
 
         <Select
           id="exp-formato"
-          label="Formato"
+          label="Formato de exportación"
           nombre="formato"
           valor={valores.formato}
-          onChange={cambiando('formato')}
-          onBlur={validando('formato')}
+          onChange={manejarCambio}
+          onBlur={manejarBlur}
           error={errores.formato}
           placeholder="Seleccionar formato"
           requerido
         >
           <option value="xlsx">Excel (XLSX)</option>
-          <option value="pdf">PDF</option>
+          <option value="pdf">Documento PDF</option>
         </Select>
       </div>
 
@@ -66,7 +68,7 @@ export default function FormExportar({ onGuardar, onCancelar, cargando }) {
           Cancelar
         </Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
-          Generar
+          Generar reporte
         </Button>
       </div>
     </form>

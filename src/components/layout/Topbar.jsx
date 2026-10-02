@@ -2,17 +2,21 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { useModal } from '../../hooks/useModal';
 import { logout } from '../../api/auth';
 import { listarPersonal } from '../../api/personal';
 import { listarServicios } from '../../api/servicios';
 import { listarIncidencias } from '../../api/incidencias';
+import { Icono } from '../ui/Icono';
+import ModalPerfil from './ModalPerfil';
 import './Topbar.css';
 
 const DEBOUNCE_MS = 300;
 
 export function Topbar({ onToggleSidebar }) {
-  const { usuario, cerrarSesion } = useAuth();
+  const { usuario, cerrarSesion, sincronizarPerfil } = useAuth();
   const { tema, alternarTema } = useTheme();
+  const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState({ personal: [], servicios: [], incidencias: [] });
   const [buscando, setBuscando] = useState(false);
@@ -20,10 +24,37 @@ export function Topbar({ onToggleSidebar }) {
   const navigate = useNavigate();
   const contenedorRef = useRef(null);
 
-  const manejarLogout = async () => {
-    await logout().catch(() => {});
-    cerrarSesion();
-    navigate('/login');
+  const manejarLogout = () => {
+    confirmar(
+      '¿Está seguro de que desea cerrar la sesión actual?',
+      async () => {
+        try {
+          await logout();
+        } catch {
+          // Si falla la red, cerramos de todos modos localmente
+        }
+        cerrarSesion();
+        navigate('/login');
+      },
+      { titulo: 'Cerrar sesión', textoConfirmar: 'Cerrar sesión' }
+    );
+  };
+
+  const abrirModalPerfil = () => {
+    abrirModal({
+      tipo: 'formulario',
+      titulo: 'Mi Perfil de Usuario',
+      contenido: (
+        <ModalPerfil
+          usuario={usuario}
+          onActualizado={async () => {
+            if (sincronizarPerfil) await sincronizarPerfil();
+          }}
+          onCancelar={cerrarModal}
+          informar={informar}
+        />
+      ),
+    });
   };
 
   useEffect(() => {
@@ -85,7 +116,9 @@ export function Topbar({ onToggleSidebar }) {
         </button>
         <div className="topbar-buscador-contenedor" ref={contenedorRef}>
           <div className="topbar-buscador">
-            <span className="topbar-buscador-icono" aria-hidden="true">🔍</span>
+            <span className="topbar-buscador-icono" aria-hidden="true">
+              <Icono nombre="buscar" tamano={15} />
+            </span>
             <input
               type="search"
               placeholder="Buscar personal, servicios o incidencias..."
@@ -124,7 +157,9 @@ export function Topbar({ onToggleSidebar }) {
                           className="topbar-resultado-item"
                           onClick={() => seleccionar('/personal')}
                         >
-                          <span className="topbar-resultado-icono">👤</span>
+                          <span className="topbar-resultado-icono">
+                            <Icono nombre="usuario" tamano={16} />
+                          </span>
                           <div className="topbar-resultado-datos">
                             <span className="topbar-resultado-nombre">
                               {p.nombres} {p.apellidos}
@@ -147,11 +182,13 @@ export function Topbar({ onToggleSidebar }) {
                           className="topbar-resultado-item"
                           onClick={() => seleccionar('/servicios')}
                         >
-                          <span className="topbar-resultado-icono">🛡️</span>
+                          <span className="topbar-resultado-icono">
+                            <Icono nombre="escudo" tamano={16} />
+                          </span>
                           <div className="topbar-resultado-datos">
                             <span className="topbar-resultado-nombre">{s.nombre}</span>
                             <span className="topbar-resultado-sub">
-                              {s.cliente_nombre || 'Cliente'} · {s.estado}
+                              {s.cliente || 'Cliente'} · {s.estado}
                             </span>
                           </div>
                         </button>
@@ -168,11 +205,13 @@ export function Topbar({ onToggleSidebar }) {
                           className="topbar-resultado-item"
                           onClick={() => seleccionar('/incidencias')}
                         >
-                          <span className="topbar-resultado-icono">⚠️</span>
+                          <span className="topbar-resultado-icono">
+                            <Icono nombre="alerta" tamano={16} />
+                          </span>
                           <div className="topbar-resultado-datos">
                             <span className="topbar-resultado-nombre">{inc.codigo}</span>
                             <span className="topbar-resultado-sub">
-                              {inc.tipo_nombre || inc.descripcion?.slice(0, 35)}
+                              {inc.tipo || inc.descripcion?.slice(0, 35)}
                             </span>
                           </div>
                         </button>
@@ -193,20 +232,29 @@ export function Topbar({ onToggleSidebar }) {
           aria-label={`Cambiar a tema ${tema === 'dark' ? 'claro' : 'oscuro'}`}
           title="Alternar tema"
         >
-          {tema === 'dark' ? '☀️' : '🌙'}
+          {tema === 'dark' ? (
+            <Icono nombre="sol" tamano={16} />
+          ) : (
+            <Icono nombre="luna" tamano={16} />
+          )}
         </button>
 
-        <div className="topbar-usuario">
+        <button
+          className="topbar-usuario"
+          onClick={abrirModalPerfil}
+          title="Ver y editar perfil de usuario"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+        >
           <div className="topbar-usuario-avatar" aria-hidden="true">
-            {usuario?.nombre?.charAt(0)?.toUpperCase() || 'A'}
+            {usuario?.nombres?.charAt(0)?.toUpperCase() || usuario?.nombre?.charAt(0)?.toUpperCase() || 'U'}
           </div>
           <div className="topbar-usuario-info">
-            <p className="topbar-usuario-nombre">{usuario?.nombre || 'Administrador'}</p>
-            <p className="topbar-usuario-rol">
-              {usuario?.rol === 'administrador' ? 'Operaciones' : usuario?.rol}
+            <p className="topbar-usuario-nombre">{usuario?.nombre || 'Usuario'}</p>
+            <p className="topbar-usuario-rol" style={{ textTransform: 'capitalize' }}>
+              {usuario?.rol || 'Operaciones'}
             </p>
           </div>
-        </div>
+        </button>
 
         <button
           className="topbar-logout-btn"
@@ -214,7 +262,7 @@ export function Topbar({ onToggleSidebar }) {
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
         >
-          ⏻
+          <Icono nombre="logout" tamano={17} />
         </button>
       </div>
     </header>

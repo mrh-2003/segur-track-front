@@ -10,6 +10,8 @@ import IncidenciasPage from '../pages/incidencias/IncidenciasPage';
 import DashboardBIPage from '../pages/dashboard-bi/DashboardBIPage';
 import MonitorMulticriterioPage from '../pages/monitor-multicriterio/MonitorMulticriterioPage';
 import ReportesPage from '../pages/reportes/ReportesPage';
+import SedesPage from '../pages/sedes/SedesPage';
+import ClientesPage from '../pages/clientes/ClientesPage';
 
 export function AppRouter() {
   return (
@@ -18,14 +20,16 @@ export function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/"                          element={<InicioPage />} />
-            <Route path="/personal"                  element={<PersonalPage />} />
-            <Route path="/turnos"                    element={<TurnosPage />} />
-            <Route path="/servicios"                 element={<ServiciosPage />} />
-            <Route path="/incidencias"               element={<IncidenciasPage />} />
-            <Route path="/dashboard-bi"              element={<DashboardBIPage />} />
-            <Route path="/monitor-multicriterio"     element={<MonitorMulticriterioPage />} />
-            <Route path="/reportes"                  element={<ReportesPage />} />
+            <Route path="/" element={<InicioPage />} />
+            <Route path="/personal" element={<PersonalPage />} />
+            <Route path="/sedes" element={<SedesPage />} />
+            <Route path="/clientes" element={<ClientesPage />} />
+            <Route path="/turnos" element={<TurnosPage />} />
+            <Route path="/servicios" element={<ServiciosPage />} />
+            <Route path="/incidencias" element={<IncidenciasPage />} />
+            <Route path="/dashboard-bi" element={<DashboardBIPage />} />
+            <Route path="/monitor-multicriterio" element={<MonitorMulticriterioPage />} />
+            <Route path="/reportes" element={<ReportesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

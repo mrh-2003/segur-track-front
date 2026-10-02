@@ -5,6 +5,8 @@ import { listarReportes, historialReportes, generarReporte, descargarReporte } f
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Icono } from '../../components/ui/Icono';
+import { formatearFechaHora, obtenerTimestampDescarga } from '../../utils/fechas';
 import FormExportar from './FormExportar';
 import './ReportesPage.css';
 
@@ -22,8 +24,8 @@ export default function ReportesPage() {
   const cargar = useCallback(async () => {
     try {
       const [lista, hist] = await Promise.all([listarReportes(), historialReportes()]);
-      setReportes(lista);
-      setHistorial(hist);
+      setReportes(lista || []);
+      setHistorial(hist || []);
     } finally {
       setCargando(false);
     }
@@ -33,7 +35,7 @@ export default function ReportesPage() {
     void cargar();
   }, [cargar]);
 
-  const reportesFiltrados = reportes.filter((r) => {
+  const reportesFiltrados = (reportes || []).filter((r) => {
     const coincideCategoria = r.categoria === pestana;
     const coincideBusqueda = busqueda.trim()
       ? r.tipo.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -54,7 +56,7 @@ export default function ReportesPage() {
                 await generarReporte(datos);
                 cerrarModal();
                 await cargar();
-                informar('Reporte generado', 'El reporte fue generado correctamente', 'exito');
+                informar('Reporte generado', 'El reporte fue generado correctamente y se encuentra disponible para su descarga', 'exito');
               } catch (err) {
                 informar('Error', err.message, 'error');
               }
@@ -70,16 +72,10 @@ export default function ReportesPage() {
   const manejarDescargar = async (id, nombre, formato) => {
     await ejecutar(async () => {
       try {
-        const respuesta = await descargarReporte(id);
-        const blob = new Blob([JSON.stringify(respuesta, null, 2)], { type: 'text/plain' });
-        const enlace = document.createElement('a');
-        enlace.href = URL.createObjectURL(blob);
-        enlace.download = `reporte_${nombre}_${id}.${formato}`;
-        document.body.appendChild(enlace);
-        enlace.click();
-        document.body.removeChild(enlace);
-        URL.revokeObjectURL(enlace.href);
-        informar('Descarga iniciada', `El reporte "${nombre}" se ha descargado correctamente.`, 'exito');
+        const timestamp = obtenerTimestampDescarga();
+        const nombreSugerido = `reporte_${nombre}_${timestamp}.${formato}`;
+        const nombreFinal = await descargarReporte(id, nombreSugerido);
+        informar('Descarga completada', `El reporte "${nombreFinal || nombreSugerido}" se ha descargado exitosamente.`, 'exito');
       } catch (err) {
         informar('Error', err.message, 'error');
       }
@@ -91,7 +87,7 @@ export default function ReportesPage() {
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Reportes</h1>
-          <p className="pagina-subtitulo">Generación y descarga de reportes</p>
+          <p className="pagina-subtitulo">Generación y descarga de reportes del sistema</p>
         </div>
         <Button variante="primario" onClick={abrirExportar}>+ Exportar</Button>
       </div>
@@ -122,26 +118,30 @@ export default function ReportesPage() {
           </div>
 
           {cargando ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-texto-tenue)' }}>Cargando...</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-texto-tenue)' }}>Cargando reportes...</div>
           ) : reportesFiltrados.length === 0 ? (
             <p style={{ padding: 32, textAlign: 'center', color: 'var(--color-texto-tenue)', fontSize: 'var(--tam-sm)' }}>
-              Sin reportes en esta categoría
+              Sin reportes disponibles en esta categoría
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
               {reportesFiltrados.map((r) => (
                 <div key={r.id} className="reporte-item">
                   <div>
-                    <p className="reporte-nombre">{r.tipo} — {r.formato.toUpperCase()}</p>
-                    <p className="reporte-fecha">{new Date(r.ultima_actualizacion).toLocaleString('es-PE')}</p>
+                    <p className="reporte-nombre" style={{ textTransform: 'capitalize' }}>
+                      {r.tipo} — {r.formato.toUpperCase()}
+                    </p>
+                    <p className="reporte-fecha">{formatearFechaHora(r.ultima_actualizacion)}</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Badge valor={r.estado} />
                     <button
                       className="accion-btn"
                       onClick={() => manejarDescargar(r.id, r.tipo, r.formato)}
+                      title="Descargar archivo"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
-                      ⬇ Descargar
+                      <Icono nombre="descargar" tamano={14} /> Descargar
                     </button>
                   </div>
                 </div>
@@ -156,16 +156,16 @@ export default function ReportesPage() {
             {historial.map((h, i) => (
               <div key={i} className="historial-item">
                 <div>
-                  <p style={{ fontSize: 'var(--tam-sm)', fontWeight: 600 }}>{h.tipo}</p>
+                  <p style={{ fontSize: 'var(--tam-sm)', fontWeight: 600, textTransform: 'capitalize' }}>{h.tipo}</p>
                   <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>
-                    {h.generado_por} · {new Date(h.creado_en).toLocaleString('es-PE')}
+                    {h.generado_por} · {formatearFechaHora(h.creado_en)}
                   </p>
                 </div>
                 <Badge valor={h.estado} />
               </div>
             ))}
             {historial.length === 0 && (
-              <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-tenue)' }}>Sin historial</p>
+              <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-tenue)' }}>Sin historial registrado</p>
             )}
           </div>
         </div>

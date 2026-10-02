@@ -6,6 +6,16 @@ export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(() => Boolean(localStorage.getItem('token')));
 
+  const sincronizarPerfil = async () => {
+    try {
+      const u = await obtenerPerfil();
+      setUsuario(u);
+      return u;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -26,7 +36,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ usuario, cargando, iniciarSesion, cerrarSesion }}>
+    <AuthContext.Provider value={{ usuario, cargando, iniciarSesion, cerrarSesion, sincronizarPerfil }}>
       {children}
     </AuthContext.Provider>
   );

@@ -11,31 +11,47 @@ import { listarServicios } from '../../api/servicios';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
+import { Icono } from '../../components/ui/Icono';
+import { formatearFecha } from '../../utils/fechas';
 import FormTurno from './FormTurno';
 import './TurnosPage.css';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-function obtenerSemana(fechaBase) {
-  const inicio = new Date(fechaBase);
-  const diaSemana = inicio.getDay();
+function formatearLocalYmd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parsearLocalYmd(str) {
+  const partes = String(str).slice(0, 10).split('-');
+  return new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+}
+
+function obtenerSemana(fechaBaseStr) {
+  const base = parsearLocalYmd(fechaBaseStr);
+  const diaSemana = base.getDay();
   const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
-  inicio.setDate(inicio.getDate() + diff);
-  const fin = new Date(inicio);
-  fin.setDate(fin.getDate() + 6);
+  const inicio = new Date(base.getFullYear(), base.getMonth(), base.getDate() + diff);
+  const fin = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
+
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+    dias.push(formatearLocalYmd(d));
+  }
+
   return {
-    desde: inicio.toISOString().slice(0, 10),
-    hasta: fin.toISOString().slice(0, 10),
-    dias: Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(inicio);
-      d.setDate(d.getDate() + i);
-      return d.toISOString().slice(0, 10);
-    }),
+    desde: formatearLocalYmd(inicio),
+    hasta: formatearLocalYmd(fin),
+    dias,
   };
 }
 
 export default function TurnosPage() {
-  const [semanaBase, setSemanaBase] = useState(new Date().toISOString().slice(0, 10));
+  const [semanaBase, setSemanaBase] = useState(() => formatearLocalYmd(new Date()));
   const [sedeId, setSedeId] = useState('');
   const [turnos, setTurnos] = useState([]);
   const [resumen, setResumen] = useState(null);
@@ -63,12 +79,12 @@ export default function TurnosPage() {
         listarPersonal({ estado: 'activo' }),
         listarServicios(),
       ]);
-      setTurnos(listaTurnos);
+      setTurnos(listaTurnos || []);
       setResumen(res);
       setAlertas(alerts);
-      setSedes(listaSedes);
-      setPersonal(listaPersonal);
-      setServicios(listaServicios);
+      setSedes(listaSedes || []);
+      setPersonal(listaPersonal || []);
+      setServicios(listaServicios || []);
     } finally {
       setCargando(false);
     }
@@ -94,7 +110,9 @@ export default function TurnosPage() {
                 cerrarModal();
                 await cargar();
                 informar('Turno asignado', 'Turno registrado correctamente', 'exito');
-              } catch (err) { informar('Error', err.message, 'error'); }
+              } catch (err) {
+                informar('Error', err.message, 'error');
+              }
             });
           }}
           onCancelar={cerrarModal}
@@ -120,33 +138,38 @@ export default function TurnosPage() {
         try {
           await confirmarTurno(turno.id);
           await cargar();
-        } catch (err) { informar('Error', err.message, 'error'); }
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
       });
     }, { titulo: 'Confirmar turno' });
   };
 
   const manejarEliminar = (turno) => {
-    confirmar(`¿Eliminar el turno de ${turno.personal} del ${turno.fecha}?`, async () => {
+    confirmar(`¿Eliminar el turno de ${turno.personal} del ${formatearFecha(turno.fecha)}?`, async () => {
       await ejecutar(async () => {
         try {
           await eliminarTurno(turno.id);
           await cargar();
-        } catch (err) { informar('Error', err.message, 'error'); }
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
       });
     }, { titulo: 'Eliminar turno', variante: 'peligro' });
   };
 
-  const turnosPorPersona = turnos.reduce((acc, t) => {
+  const turnosPorPersona = (turnos || []).reduce((acc, t) => {
     const key = t.personal_id;
     if (!acc[key]) acc[key] = { nombre: t.personal, turnos: {} };
-    acc[key].turnos[t.fecha] = t;
+    const fechaKey = String(t.fecha).slice(0, 10);
+    acc[key].turnos[fechaKey] = t;
     return acc;
   }, {});
 
   const avanzarSemana = (delta) => {
-    const d = new Date(semanaBase);
+    const d = parsearLocalYmd(semanaBase);
     d.setDate(d.getDate() + delta * 7);
-    setSemanaBase(d.toISOString().slice(0, 10));
+    setSemanaBase(formatearLocalYmd(d));
   };
 
   return (
@@ -169,7 +192,9 @@ export default function TurnosPage() {
         <div className="tarjeta">
           <div className="turnos-controles">
             <button className="turnos-nav-btn" onClick={() => avanzarSemana(-1)} aria-label="Semana anterior">←</button>
-            <span className="turnos-semana-label">{semana.desde} — {semana.hasta}</span>
+            <span className="turnos-semana-label">
+              {formatearFecha(semana.desde)} — {formatearFecha(semana.hasta)}
+            </span>
             <button className="turnos-nav-btn" onClick={() => avanzarSemana(1)} aria-label="Semana siguiente">→</button>
             <Select id="filtro-sede-turnos" nombre="sedeId" valor={sedeId}
               onChange={(e) => setSedeId(e.target.value)} placeholder="Todas las sedes">
@@ -185,7 +210,7 @@ export default function TurnosPage() {
                   {semana.dias.map((dia, i) => (
                     <th key={dia} className="turnos-th-dia">
                       <div>{DIAS[i]}</div>
-                      <div className="turnos-dia-fecha">{dia.slice(8)}</div>
+                      <div className="turnos-dia-fecha">{formatearFecha(dia).slice(0, 5)}</div>
                     </th>
                   ))}
                   <th className="turnos-th-acciones">Acciones</th>
@@ -193,9 +218,9 @@ export default function TurnosPage() {
               </thead>
               <tbody>
                 {cargando ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Cargando...</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Cargando turnos...</td></tr>
                 ) : Object.keys(turnosPorPersona).length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Sin turnos en esta semana</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Sin turnos programados en esta semana</td></tr>
                 ) : (
                   Object.values(turnosPorPersona).map((p) => (
                     <tr key={p.nombre} className="turnos-tr">
@@ -205,8 +230,11 @@ export default function TurnosPage() {
                         return (
                           <td key={dia} className="turnos-td-dia">
                             {t && (
-                              <div className={`turno-chip turno-chip-${t.estado}`}>
-                                {t.hora_inicio.slice(0, 5)}
+                              <div
+                                className={`turno-chip turno-chip-${t.estado}`}
+                                title={`${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)}) - Estado: ${t.estado}`}
+                              >
+                                {t.hora_inicio?.slice(0, 5)}
                               </div>
                             )}
                           </td>
@@ -216,9 +244,13 @@ export default function TurnosPage() {
                         {Object.values(p.turnos).slice(0, 1).map((t) => (
                           <div key={t.id} style={{ display: 'flex', gap: 4 }}>
                             {t.estado === 'sin_confirmar' && (
-                              <button className="accion-btn" onClick={() => manejarConfirmar(t)} title="Confirmar">✓</button>
+                              <button className="accion-btn" onClick={() => manejarConfirmar(t)} title="Confirmar">
+                                <Icono nombre="confirmar" tamano={13} />
+                              </button>
                             )}
-                            <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(t)} title="Eliminar">🗑️</button>
+                            <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(t)} title="Eliminar">
+                              <Icono nombre="eliminar" tamano={13} />
+                            </button>
                           </div>
                         ))}
                       </td>

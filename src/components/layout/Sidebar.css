@@ -93,6 +93,7 @@
   .sidebar {
     transform: translateX(-100%);
   }
+
   .sidebar-visible {
     transform: translateX(0);
     box-shadow: var(--sombra-xl);

@@ -233,12 +233,15 @@
     left: 0;
     padding: 0 16px;
   }
+
   .topbar-menu-btn {
     display: flex;
   }
+
   .topbar-buscador-contenedor {
     max-width: 220px;
   }
+
   .topbar-usuario-info {
     display: none;
   }

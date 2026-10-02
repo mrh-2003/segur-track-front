@@ -30,6 +30,46 @@ async function solicitar(ruta, opciones = {}) {
   return datos.datos;
 }
 
+export async function descargarArchivo(ruta, nombrePorDefecto = 'reporte') {
+  const token = localStorage.getItem('token');
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${ruta}`, { headers });
+
+  if (res.status === 401) {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+    throw new ErrorApi('Sesión expirada', 401);
+  }
+
+  if (!res.ok) {
+    const errorJson = await res.json().catch(() => ({}));
+    throw new ErrorApi(errorJson.mensaje || 'Error descargando archivo', res.status);
+  }
+
+  const disposition = res.headers.get('content-disposition');
+  let nombreArchivo = nombrePorDefecto;
+  if (disposition) {
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    if (match && match[1]) {
+      nombreArchivo = match[1];
+    }
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+
+  return nombreArchivo;
+}
+
 export const get    = (ruta)          => solicitar(ruta);
 export const post   = (ruta, cuerpo)  => solicitar(ruta, { method: 'POST',   body: JSON.stringify(cuerpo) });
 export const put    = (ruta, cuerpo)  => solicitar(ruta, { method: 'PUT',    body: JSON.stringify(cuerpo) });

@@ -20,15 +20,15 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
 
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     {
-      nombre:      inicial?.nombre       || '',
-      clienteId:   inicial?.cliente_id   || '',
-      sedeId:      inicial?.sede_id      || '',
-      supervisorId: inicial?.supervisor_id || '',
-      horaInicio:  inicial?.hora_inicio  || '',
-      horaFin:     inicial?.hora_fin     || '',
-      estado:      inicial?.estado       || 'programado',
-      fechaInicio: inicial?.fecha_inicio || '',
-      fechaFin:    inicial?.fecha_fin    || '',
+      nombre: inicial?.nombre || '',
+      clienteId: inicial?.cliente_id ? String(inicial.cliente_id) : (inicial?.clienteId ? String(inicial.clienteId) : ''),
+      sedeId: inicial?.sede_id ? String(inicial.sede_id) : (inicial?.sedeId ? String(inicial.sedeId) : ''),
+      supervisorId: inicial?.supervisor_id ? String(inicial.supervisor_id) : (inicial?.supervisorId ? String(inicial.supervisorId) : ''),
+      horaInicio: (inicial?.hora_inicio || inicial?.horaInicio || '').slice(0, 5),
+      horaFin: (inicial?.hora_fin || inicial?.horaFin || '').slice(0, 5),
+      estado: inicial?.estado || 'programado',
+      fechaInicio: (inicial?.fecha_inicio || inicial?.fechaInicio || '').slice(0, 10),
+      fechaFin: (inicial?.fecha_fin || inicial?.fechaFin || '').slice(0, 10),
     },
     validar
   );
@@ -38,9 +38,13 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
     if (!validarTodo()) return;
     onGuardar({
       ...valores,
-      clienteId:    parseInt(valores.clienteId, 10),
-      sedeId:       parseInt(valores.sedeId, 10),
+      clienteId: parseInt(valores.clienteId, 10),
+      sedeId: parseInt(valores.sedeId, 10),
       supervisorId: parseInt(valores.supervisorId, 10),
+      horaInicio: valores.horaInicio.slice(0, 5),
+      horaFin: valores.horaFin.slice(0, 5),
+      fechaInicio: valores.fechaInicio.slice(0, 10),
+      fechaFin: valores.fechaFin ? valores.fechaFin.slice(0, 10) : null,
     });
   };
 
@@ -85,7 +89,7 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
           valor={valores.fechaFin} onChange={manejarCambio} />
       </div>
       <div className="form-pie">
-        <Button variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>

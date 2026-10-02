@@ -14,11 +14,16 @@ const validar = (v) => {
 export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, onCancelar, cargando }) {
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     {
-      tipoIncidenciaId: inicial?.tipo_incidencia_id || '',
-      servicioId:       inicial?.servicio_id || '',
-      descripcion:      inicial?.descripcion || '',
-      prioridad:        inicial?.prioridad || '',
-      estado:           inicial?.estado || 'abierta',
+      tipoIncidenciaId: inicial?.tipo_incidencia_id
+        ? String(inicial.tipo_incidencia_id)
+        : (inicial?.tipoIncidenciaId ? String(inicial.tipoIncidenciaId) : ''),
+      servicioId: inicial?.servicio_id
+        ? String(inicial.servicio_id)
+        : (inicial?.servicioId ? String(inicial.servicioId) : ''),
+      personalId: inicial?.personal_id ? String(inicial.personal_id) : '',
+      descripcion: inicial?.descripcion || '',
+      prioridad: inicial?.prioridad || '',
+      estado: inicial?.estado || 'abierta',
     },
     validar
   );
@@ -30,6 +35,7 @@ export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, o
       ...valores,
       tipoIncidenciaId: parseInt(valores.tipoIncidenciaId, 10),
       servicioId: parseInt(valores.servicioId, 10),
+      personalId: valores.personalId ? parseInt(valores.personalId, 10) : undefined,
     });
   };
 
@@ -72,13 +78,23 @@ export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, o
             onChange={manejarCambio}
             onBlur={manejarBlur}
             rows={4}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: 'var(--radio-md)', border: '1.5px solid var(--color-borde)', background: 'var(--color-superficie)', color: 'var(--color-texto-principal)', fontSize: 'var(--tam-sm)', resize: 'vertical', fontFamily: 'var(--fuente-base)' }}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              borderRadius: 'var(--radio-md)',
+              border: '1.5px solid var(--color-borde)',
+              background: 'var(--color-superficie)',
+              color: 'var(--color-texto-principal)',
+              fontSize: 'var(--tam-sm)',
+              resize: 'vertical',
+              fontFamily: 'var(--fuente-base)',
+            }}
           />
           {errores.descripcion && <p className="campo-error">{errores.descripcion}</p>}
         </div>
       </div>
       <div className="form-pie">
-        <Button variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>

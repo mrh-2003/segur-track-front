@@ -8,6 +8,7 @@ const validar = (v) => {
   if (!v.nombres?.trim()) e.nombres = 'Nombres requeridos';
   if (!v.apellidos?.trim()) e.apellidos = 'Apellidos requeridos';
   if (!v.documento || !/^\d{8}$/.test(v.documento)) e.documento = 'DNI debe tener 8 dígitos numéricos';
+  if (!v.correo || !/\S+@\S+\.\S+/.test(v.correo)) e.correo = 'Correo electrónico válido requerido';
   if (!v.cargo) e.cargo = 'Seleccione un cargo';
   if (!v.sedeId) e.sedeId = 'Seleccione una sede';
   return e;
@@ -19,9 +20,10 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
       nombres:   inicial?.nombres   || '',
       apellidos: inicial?.apellidos || '',
       documento: inicial?.documento || '',
+      correo:    inicial?.correo    || '',
       cargo:     inicial?.cargo     || '',
       estado:    inicial?.estado    || 'activo',
-      sedeId:    inicial?.sede_id   || '',
+      sedeId:    inicial?.sede_id ? String(inicial.sede_id) : (inicial?.sedeId ? String(inicial.sedeId) : ''),
     },
     validar
   );
@@ -42,6 +44,9 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         <Input id="form-documento" label="DNI" nombre="documento" valor={valores.documento}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.documento}
           placeholder="12345678" maxLength={8} requerido />
+        <Input id="form-correo" label="Correo electrónico" nombre="correo" tipo="email" valor={valores.correo}
+          onChange={manejarCambio} onBlur={manejarBlur} error={errores.correo}
+          placeholder="usuario@segurtrack.com" requerido />
         <Select id="form-cargo" label="Cargo" nombre="cargo" valor={valores.cargo}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.cargo}
           placeholder="Seleccionar cargo" requerido>
@@ -61,7 +66,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         </Select>
       </div>
       <div className="form-pie">
-        <Button variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>

@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import FormPersonal from './FormPersonal';
+import { Icono } from '../../components/ui/Icono';
 import './PersonalPage.css';
 
 const DEBOUNCE_MS = 300;
@@ -132,18 +133,34 @@ export default function PersonalPage() {
   };
 
   const columnas = [
-    { llave: 'nombre_completo', titulo: 'Nombre', render: (f) => `${f.nombres} ${f.apellidos}` },
+    {
+      llave: 'nombre_completo',
+      titulo: 'Nombre',
+      render: (f) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{f.nombres} {f.apellidos}</div>
+          <div style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)' }}>{f.correo || f.documento}</div>
+        </div>
+      ),
+    },
     { llave: 'documento', titulo: 'Documento' },
     { llave: 'cargo', titulo: 'Cargo', render: (f) => <span style={{ textTransform: 'capitalize' }}>{f.cargo}</span> },
+    { llave: 'sede', titulo: 'Sede', render: (f) => f.sede || '—' },
     { llave: 'turno_actual', titulo: 'Turno actual', render: (f) => f.turno_actual || <span style={{ color: 'var(--color-texto-tenue)' }}>—</span> },
     { llave: 'estado', titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
         <div className="tabla-acciones">
-          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">✏️</button>
-          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">🔄</button>
-          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">🗑️</button>
+          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
+            <Icono nombre="editar" tamano={14} />
+          </button>
+          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
+            <Icono nombre="estado" tamano={14} />
+          </button>
+          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">
+            <Icono nombre="eliminar" tamano={14} />
+          </button>
         </div>
       ),
     },

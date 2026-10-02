@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { resumenInicio, actividadOperativa, actividadReciente } from '../../api/inicio';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { useModal } from '../../hooks/useModal';
+import { Icono } from '../../components/ui/Icono';
+import { formatearFechaHora } from '../../utils/fechas';
 import GraficoActividadOperativa from './GraficoActividadOperativa';
 import './InicioPage.css';
 
 const ACCESOS = [
-  { label: 'Nuevo personal',       ruta: '/personal',    modal: true,  emoji: '👤' },
-  { label: 'Asignar turno',        ruta: '/turnos',      modal: true,  emoji: '🗓️' },
-  { label: 'Registrar incidencia', ruta: '/incidencias', modal: true,  emoji: '⚠️' },
-  { label: 'Ver servicios',        ruta: '/servicios',   modal: false, emoji: '🛡️' },
+  { label: 'Nuevo personal', ruta: '/personal', modal: true, icono: 'personal' },
+  { label: 'Asignar turno', ruta: '/turnos', modal: true, icono: 'turnos' },
+  { label: 'Registrar incidencia', ruta: '/incidencias', modal: true, icono: 'incidencias' },
+  { label: 'Ver servicios', ruta: '/servicios', modal: false, icono: 'servicios' },
 ];
 
 export default function InicioPage() {
@@ -56,10 +58,10 @@ export default function InicioPage() {
       </div>
 
       <div className="grilla-kpi grilla-kpi-4">
-        <KpiCard titulo="Personal activo"    valor={resumen?.personal_activo}    variacion={resumen?.personal_nuevo_semana}   color="primario"    cargando={cargando} />
-        <KpiCard titulo="Servicios en curso" valor={resumen?.servicios_en_curso}  variacion={resumen?.servicios_nuevos_semana}  color="exito"       cargando={cargando} />
-        <KpiCard titulo="Incidencias abiertas" valor={resumen?.incidencias_abiertas} variacion={resumen?.incidencias_ayer}     color="peligro"     cargando={cargando} />
-        <KpiCard titulo="T. prom. atención"  valor={resumen?.tiempo_prom_atencion ? `${resumen.tiempo_prom_atencion} min` : null} color="advertencia" cargando={cargando} />
+        <KpiCard titulo="Personal activo" valor={resumen?.personal_activo} variacion={resumen?.personal_nuevo_semana} color="primario" cargando={cargando} />
+        <KpiCard titulo="Servicios en curso" valor={resumen?.servicios_en_curso} variacion={resumen?.servicios_nuevos_semana} color="exito" cargando={cargando} />
+        <KpiCard titulo="Incidencias abiertas" valor={resumen?.incidencias_abiertas} variacion={resumen?.incidencias_ayer} color="peligro" cargando={cargando} />
+        <KpiCard titulo="T. prom. atención" valor={resumen?.tiempo_prom_atencion ? `${resumen.tiempo_prom_atencion} min` : null} color="advertencia" cargando={cargando} />
       </div>
 
       <div className="grilla-contenido grilla-2-1">
@@ -78,7 +80,9 @@ export default function InicioPage() {
                 className="acceso-btn"
                 onClick={() => navigate(a.ruta, a.modal ? { state: { abrirModal: true } } : undefined)}
               >
-                <span className="acceso-emoji">{a.emoji}</span>
+                <span className="acceso-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icono nombre={a.icono} tamano={20} />
+                </span>
                 <span className="acceso-label">{a.label}</span>
               </button>
             ))}
@@ -92,19 +96,29 @@ export default function InicioPage() {
           <p style={{ color: 'var(--color-texto-tenue)', fontSize: 'var(--tam-sm)' }}>Sin actividad reciente</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {recientes.map((r, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-borde-suave)' }}>
-                <div className="actividad-icono">
-                  {r.tipo?.includes('incidencia') ? '⚠️' : r.tipo?.includes('turno') ? '🗓️' : r.tipo?.includes('servicio') ? '🛡️' : '👤'}
+            {recientes.map((r, i) => {
+              const iconoTipo = r.tipo?.includes('incidencia')
+                ? 'incidencias'
+                : r.tipo?.includes('turno')
+                ? 'turnos'
+                : r.tipo?.includes('servicio')
+                ? 'servicios'
+                : 'personal';
+
+              return (
+                <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-borde-suave)', alignItems: 'center' }}>
+                  <div className="actividad-icono" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: 'var(--color-fondo-panel)' }}>
+                    <Icono nombre={iconoTipo} tamano={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-principal)', margin: 0 }}>{r.descripcion}</p>
+                    <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)', margin: '2px 0 0 0' }}>
+                      {formatearFechaHora(r.creado_en)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-principal)' }}>{r.descripcion}</p>
-                  <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)', marginTop: 2 }}>
-                    {new Date(r.creado_en).toLocaleString('es-PE')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

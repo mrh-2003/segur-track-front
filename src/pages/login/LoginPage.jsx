@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useModal } from '../../hooks/useModal';
@@ -6,6 +7,8 @@ import { useAsync } from '../../hooks/useAsync';
 import { login } from '../../api/auth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import ModalRecuperarClave from './ModalRecuperarClave';
+import ModalCambioObligatorio from './ModalCambioObligatorio';
 import './LoginPage.css';
 
 const validar = (valores) => {
@@ -18,7 +21,7 @@ const validar = (valores) => {
 
 export default function LoginPage() {
   const { iniciarSesion } = useAuth();
-  const { informar } = useModal();
+  const { abrirModal, cerrarModal, informar } = useModal();
   const navigate = useNavigate();
   const { cargando, ejecutar } = useAsync();
 
@@ -27,6 +30,15 @@ export default function LoginPage() {
     validar
   );
 
+  const abrirOlvideClave = (e) => {
+    e.preventDefault();
+    abrirModal({
+      tipo: 'formulario',
+      titulo: 'Recuperar contraseña',
+      contenido: <ModalRecuperarClave onCerrar={cerrarModal} informar={informar} />,
+    });
+  };
+
   const manejarSubmit = async (e) => {
     e.preventDefault();
     if (!validarTodo()) return;
@@ -34,6 +46,26 @@ export default function LoginPage() {
     await ejecutar(async () => {
       try {
         const resultado = await login(valores);
+
+        if (resultado.usuario?.debeCambiarClave) {
+          iniciarSesion(resultado.token, resultado.usuario);
+          abrirModal({
+            tipo: 'formulario',
+            titulo: 'Actualización obligatoria de contraseña',
+            contenido: (
+              <ModalCambioObligatorio
+                claveActual={valores.clave}
+                onExito={() => {
+                  cerrarModal();
+                  navigate('/');
+                }}
+                informar={informar}
+              />
+            ),
+          });
+          return;
+        }
+
         iniciarSesion(resultado.token, resultado.usuario);
         navigate('/');
       } catch (err) {
@@ -46,7 +78,7 @@ export default function LoginPage() {
     <div className="login-pagina">
       <div className="login-panel">
         <div className="login-logo">
-          <span className="login-logo-icono" aria-hidden="true">M</span>
+          <span className="login-logo-icono" aria-hidden="true">ST</span>
           <h1 className="login-titulo">Segur Track</h1>
         </div>
         <p className="login-subtitulo">Sistema de monitoreo operativo de seguridad</p>
@@ -61,7 +93,7 @@ export default function LoginPage() {
             onChange={manejarCambio}
             onBlur={manejarBlur}
             error={errores.correo}
-            placeholder="nombre@empresa.com"
+            placeholder="usuario@segurtrack.com"
             requerido
             autoComplete="email"
           />
@@ -78,6 +110,26 @@ export default function LoginPage() {
             requerido
             autoComplete="current-password"
           />
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -6, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={abrirOlvideClave}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primario)',
+                fontSize: 'var(--tam-sm)',
+                fontWeight: 500,
+                cursor: 'pointer',
+                padding: 0,
+                textDecoration: 'underline',
+              }}
+            >
+              ¿Olvidó su contraseña?
+            </button>
+          </div>
+
           <Button
             tipo="submit"
             variante="primario"
@@ -89,6 +141,10 @@ export default function LoginPage() {
             Iniciar sesión
           </Button>
         </form>
+
+        <p className="login-pie">
+          Uso exclusivo para personal autorizado de Segur Track
+        </p>
       </div>
     </div>
   );

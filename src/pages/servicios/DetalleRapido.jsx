@@ -1,12 +1,13 @@
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { formatearFecha } from '../../utils/fechas';
 import './DetalleRapido.css';
 
 export default function DetalleRapido({ servicio, onEditar }) {
   if (!servicio) {
     return (
       <div className="tarjeta detalle-rapido detalle-vacio">
-        <p className="detalle-vacio-texto">Selecciona un servicio para ver el detalle rápido</p>
+        <p className="detalle-vacio-texto">Seleccione un servicio para ver el detalle rápido</p>
       </div>
     );
   }
@@ -14,11 +15,17 @@ export default function DetalleRapido({ servicio, onEditar }) {
   return (
     <div className="tarjeta detalle-rapido">
       <h3 className="tarjeta-titulo">{servicio.nombre}</h3>
-      <Badge valor={servicio.estado} />
+      <div style={{ marginBottom: 12 }}>
+        <Badge valor={servicio.estado} />
+      </div>
       <dl className="detalle-lista">
         <div className="detalle-item">
           <dt>Cliente</dt>
           <dd>{servicio.cliente}</dd>
+        </div>
+        <div className="detalle-item">
+          <dt>Sede</dt>
+          <dd>{servicio.sede || '—'}</dd>
         </div>
         <div className="detalle-item">
           <dt>Supervisor</dt>
@@ -26,7 +33,7 @@ export default function DetalleRapido({ servicio, onEditar }) {
         </div>
         <div className="detalle-item">
           <dt>Horario</dt>
-          <dd>{servicio.hora_inicio} – {servicio.hora_fin}</dd>
+          <dd>{servicio.hora_inicio?.slice(0, 5)} – {servicio.hora_fin?.slice(0, 5)}</dd>
         </div>
         <div className="detalle-item">
           <dt>Personal asignado</dt>
@@ -34,11 +41,17 @@ export default function DetalleRapido({ servicio, onEditar }) {
         </div>
         <div className="detalle-item">
           <dt>Inicio</dt>
-          <dd>{servicio.fecha_inicio}</dd>
+          <dd>{formatearFecha(servicio.fecha_inicio)}</dd>
         </div>
+        {servicio.fecha_fin && (
+          <div className="detalle-item">
+            <dt>Fin</dt>
+            <dd>{formatearFecha(servicio.fecha_fin)}</dd>
+          </div>
+        )}
       </dl>
-      <Button variante="primario" onClick={onEditar} tamano="sm" style={{ width: '100%', justifyContent: 'center' }}>
-        Ver detalle
+      <Button variante="primario" onClick={onEditar} tamano="sm" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}>
+        Editar / Ver detalle
       </Button>
     </div>
   );

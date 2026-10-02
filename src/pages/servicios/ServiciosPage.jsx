@@ -14,6 +14,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Icono } from '../../components/ui/Icono';
+import { formatearFecha } from '../../utils/fechas';
 import FormServicio from './FormServicio';
 import DetalleRapido from './DetalleRapido';
 
@@ -52,10 +54,13 @@ export default function ServiciosPage() {
       setClientes(listaClientes);
       setPersonal(listaPersonal);
       setSedes(listaSedes);
+      if (lista.length > 0 && !seleccionado) {
+        setSeleccionado(lista[0]);
+      }
     } finally {
       setCargando(false);
     }
-  }, [filtros]);
+  }, [filtros, seleccionado]);
 
   useEffect(() => {
     const t = setTimeout(cargar, filtros.q ? DEBOUNCE_MS : 0);
@@ -75,12 +80,17 @@ export default function ServiciosPage() {
           onGuardar={async (datos) => {
             await ejecutar(async () => {
               try {
-                if (item) await actualizarServicio(item.id, datos);
-                else await crearServicio(datos);
+                if (item) {
+                  await actualizarServicio(item.id, datos);
+                } else {
+                  await crearServicio(datos);
+                }
                 cerrarModal();
                 await cargar();
-                informar('Operación exitosa', item ? 'Servicio actualizado' : 'Servicio creado', 'exito');
-              } catch (err) { informar('Error', err.message, 'error'); }
+                informar('Operación exitosa', item ? 'Servicio actualizado correctamente' : 'Servicio creado correctamente', 'exito');
+              } catch (err) {
+                informar('Error', err.message, 'error');
+              }
             });
           }}
           onCancelar={cerrarModal}
@@ -104,54 +114,71 @@ export default function ServiciosPage() {
     try {
       const detalle = await obtenerServicio(item.id);
       setSeleccionado(detalle);
-    } catch (err) {
-      informar('Error', err.message, 'error');
+    } catch {
+      setSeleccionado(item);
     }
   };
 
   const manejarCambiarEstado = (item) => {
-    const siguiente = item.estado === 'programado' ? 'en_curso' : item.estado === 'en_curso' ? 'finalizado' : 'programado';
-    confirmar(`¿Cambiar estado de "${item.nombre}" a "${siguiente}"?`, async () => {
+    const siguienteEstado = item.estado === 'programado' ? 'en_curso' : item.estado === 'en_curso' ? 'finalizado' : 'programado';
+    confirmar(`¿Cambiar estado del servicio "${item.nombre}" a "${siguienteEstado}"?`, async () => {
       await ejecutar(async () => {
         try {
-          await cambiarEstadoServicio(item.id, siguiente);
+          await cambiarEstadoServicio(item.id, siguienteEstado);
           await cargar();
-          informar('Estado actualizado', `Servicio actualizado a ${siguiente}`, 'exito');
-        } catch (err) { informar('Error', err.message, 'error'); }
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
       });
     }, { titulo: 'Cambiar estado' });
   };
 
   const manejarEliminar = (item) => {
-    confirmar(
-      `¿Eliminar el servicio "${item.nombre}"?`,
-      async () => {
-        await ejecutar(async () => {
-          try {
-            await eliminarServicio(item.id);
-            setSeleccionado(null);
-            await cargar();
-          } catch (err) { informar('Error', err.message, 'error'); }
-        });
-      },
-      { titulo: 'Eliminar servicio', variante: 'peligro' }
-    );
+    confirmar(`¿Eliminar el servicio "${item.nombre}"?`, async () => {
+      await ejecutar(async () => {
+        try {
+          await eliminarServicio(item.id);
+          if (seleccionado?.id === item.id) setSeleccionado(null);
+          await cargar();
+          informar('Eliminado', 'Servicio eliminado correctamente', 'exito');
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
+      });
+    }, { titulo: 'Eliminar servicio', variante: 'peligro' });
   };
 
   const columnas = [
     { llave: 'nombre',     titulo: 'Servicio' },
     { llave: 'cliente',    titulo: 'Cliente' },
     { llave: 'supervisor', titulo: 'Supervisor' },
-    { llave: 'horario',    titulo: 'Horario', render: (f) => `${f.hora_inicio} - ${f.hora_fin}` },
+    {
+      llave: 'horario',
+      titulo: 'Horario',
+      render: (f) => `${f.hora_inicio?.slice(0, 5)} - ${f.hora_fin?.slice(0, 5)}`,
+    },
+    {
+      llave: 'fecha_inicio',
+      titulo: 'Fecha inicio',
+      render: (f) => formatearFecha(f.fecha_inicio),
+    },
     { llave: 'estado',     titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="accion-btn" onClick={() => manejarVerDetalle(f)} title="Ver detalle">👁️</button>
-          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">✏️</button>
-          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">🔄</button>
-          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">🗑️</button>
+          <button className="accion-btn" onClick={() => manejarVerDetalle(f)} title="Ver detalle">
+            <Icono nombre="ojo" tamano={14} />
+          </button>
+          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
+            <Icono nombre="editar" tamano={14} />
+          </button>
+          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
+            <Icono nombre="estado" tamano={14} />
+          </button>
+          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">
+            <Icono nombre="eliminar" tamano={14} />
+          </button>
         </div>
       ),
     },

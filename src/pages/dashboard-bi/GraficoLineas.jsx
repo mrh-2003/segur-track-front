@@ -1,3 +1,5 @@
+import { formatearFecha } from '../../utils/fechas';
+
 const COLORES = ['#2563EB', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#0891B2'];
 const ALTO = 160;
 const ALTO_SVG = 180;
@@ -49,7 +51,7 @@ export default function GraficoLineas({ datos, cargando }) {
         {datos.map((d, i) => (
           <text key={i} x={puntoX(i)} y={ALTO_SVG - 4} textAnchor="middle"
             fontSize="10" fill="var(--color-texto-tenue)">
-            {d.semana ? new Date(d.semana).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }) : i + 1}
+            {d.semana ? formatearFecha(d.semana) : i + 1}
           </text>
         ))}
       </svg>
