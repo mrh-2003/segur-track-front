@@ -106,7 +106,7 @@ export default function ReportesPage() {
                 </button>
               ))}
             </div>
-            <div style={{ width: 220 }}>
+            <div style={{ flex: '1 1 180px', maxWidth: 280 }}>
               <Input
                 id="buscar-reportes"
                 nombre="busqueda"

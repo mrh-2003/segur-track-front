@@ -7,4 +7,5 @@ export const crearPersonal      = (datos)        => post('/personal', datos);
 export const actualizarPersonal = (id, datos)    => put(`/personal/${id}`, datos);
 export const cambiarEstadoPersonal = (id, estado) => patch(`/personal/${id}/estado`, { estado });
 export const eliminarPersonal   = (id)           => del(`/personal/${id}`);
+export const reiniciarClavePersonal = (id)        => post(`/personal/${id}/reiniciar-clave`, {});
 export const listarSedes        = ()             => get('/sedes');

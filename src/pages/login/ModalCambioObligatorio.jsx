@@ -23,8 +23,9 @@ const validar = (v) => {
   return e;
 };
 
-export default function ModalCambioObligatorio({ claveActual, onExito, informar }) {
+export default function ModalCambioObligatorio({ claveActual, onExito }) {
   const [cargando, setCargando] = useState(false);
+  const [errorGeneral, setErrorGeneral] = useState('');
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     { nuevaClave: '', confirmarClave: '' },
     validar
@@ -33,16 +34,16 @@ export default function ModalCambioObligatorio({ claveActual, onExito, informar 
   const manejarSubmit = async (e) => {
     e.preventDefault();
     if (!validarTodo()) return;
+    setErrorGeneral('');
     setCargando(true);
     try {
       await cambiarClave({
         claveActual,
         nuevaClave: valores.nuevaClave,
       });
-      informar('Contraseña actualizada', 'Su contraseña ha sido actualizada con éxito.', 'exito');
       onExito();
     } catch (err) {
-      informar('Error', err.message, 'error');
+      setErrorGeneral(err.message || 'Error al actualizar la contraseña');
     } finally {
       setCargando(false);
     }
@@ -53,6 +54,20 @@ export default function ModalCambioObligatorio({ claveActual, onExito, informar 
       <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-secundario)', lineHeight: 1.5 }}>
         Su cuenta tiene configurada la contraseña inicial por defecto. Por seguridad, debe crear una nueva contraseña personal antes de ingresar al sistema.
       </p>
+
+      {errorGeneral && (
+        <div style={{
+          padding: '10px 14px',
+          background: 'rgba(220, 38, 38, 0.1)',
+          border: '1px solid var(--color-peligro)',
+          color: 'var(--color-peligro)',
+          borderRadius: 'var(--radio-md)',
+          fontSize: 'var(--tam-sm)',
+          fontWeight: 500,
+        }}>
+          {errorGeneral}
+        </div>
+      )}
 
       <Input
         id="cambio-obligatorio-nueva"

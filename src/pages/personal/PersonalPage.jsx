@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
+import { useAuth } from '../../hooks/useAuth';
 import {
   listarPersonal, resumenPersonal, crearPersonal,
-  actualizarPersonal, cambiarEstadoPersonal, eliminarPersonal, listarSedes,
+  actualizarPersonal, cambiarEstadoPersonal, eliminarPersonal,
+  reiniciarClavePersonal, listarSedes,
 } from '../../api/personal';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Table } from '../../components/ui/Table';
@@ -50,6 +52,7 @@ function useDatos() {
 }
 
 export default function PersonalPage() {
+  const { usuario } = useAuth();
   const { personal, resumen, sedes, cargando, filtros, setFiltros, cargar } = useDatos();
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
@@ -132,6 +135,24 @@ export default function PersonalPage() {
     );
   };
 
+  const manejarReiniciarClave = (item) => {
+    confirmar(
+      `¿Desea reiniciar la contraseña de ${item.nombres} ${item.apellidos}? Su contraseña volverá a ser su correo (${item.correo}) y se le obligará a crear una nueva contraseña en su próximo inicio de sesión.`,
+      async () => {
+        await ejecutar(async () => {
+          try {
+            const resp = await reiniciarClavePersonal(item.id);
+            informar('Contraseña reiniciada', resp.mensaje || 'Contraseña reiniciada correctamente a su correo corporativo.', 'exito');
+            await cargar();
+          } catch (err) {
+            informar('Error', err.message, 'error');
+          }
+        });
+      },
+      { titulo: 'Reiniciar contraseña', variante: 'primario', labelConfirmar: 'Reiniciar' }
+    );
+  };
+
   const columnas = [
     {
       llave: 'nombre_completo',
@@ -155,6 +176,15 @@ export default function PersonalPage() {
           <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
             <Icono nombre="editar" tamano={14} />
           </button>
+          {usuario?.rol === 'administrador' && (
+            <button
+              className="accion-btn"
+              onClick={() => manejarReiniciarClave(f)}
+              title="Reiniciar contraseña (volverá a ser su usuario y contraseña)"
+            >
+              <Icono nombre="clave" tamano={14} />
+            </button>
+          )}
           <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
             <Icono nombre="estado" tamano={14} />
           </button>

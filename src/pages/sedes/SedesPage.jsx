@@ -124,7 +124,7 @@ export default function SedesPage() {
       </div>
 
       <div className="tarjeta">
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16, maxWidth: 360 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16, maxWidth: 360, width: '100%' }}>
           <Input
             id="buscar-sedes"
             nombre="busqueda"

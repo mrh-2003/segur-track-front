@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ModalContext } from './modal.context';
+import { Modal } from '../components/ui/Modal';
 
 export function ModalProvider({ children }) {
   const [modal, setModal] = useState(null);
@@ -31,6 +32,7 @@ export function ModalProvider({ children }) {
   return (
     <ModalContext.Provider value={{ modal, abrirModal, cerrarModal, confirmar, informar }}>
       {children}
+      <Modal modal={modal} onCerrar={cerrarModal} />
     </ModalContext.Provider>
   );
 }

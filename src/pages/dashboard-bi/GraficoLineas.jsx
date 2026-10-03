@@ -36,7 +36,7 @@ export default function GraficoLineas({ datos, cargando }) {
   };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', maxWidth: '100%' }}>
       <svg width="100%" viewBox={`0 0 ${ancho} ${ALTO_SVG}`} preserveAspectRatio="none" style={{ minWidth: ANCHO_MIN }}>
         {[0, 25, 50, 75, 100].map((v) => (
           <g key={v}>

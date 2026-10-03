@@ -14,12 +14,20 @@ const MENU = [
   { ruta: '/reportes', etiqueta: 'Reportes' },
 ];
 
-export function Sidebar({ visible }) {
+export function Sidebar({ visible, onCerrar }) {
   return (
-    <nav className={`sidebar ${visible ? '' : 'sidebar-oculto'}`} aria-label="Navegación principal">
+    <nav className={`sidebar ${visible ? 'sidebar-visible' : 'sidebar-oculto'}`} aria-label="Navegación principal">
       <div className="sidebar-logo">
         <span className="sidebar-logo-icono" aria-hidden="true">ST</span>
         <span className="sidebar-logo-texto">Segur Track</span>
+        <button
+          className="sidebar-cerrar-mobile"
+          onClick={onCerrar}
+          aria-label="Cerrar navegación"
+          type="button"
+        >
+          ✕
+        </button>
       </div>
       <ul className="sidebar-menu" role="list">
         {MENU.map((item) => (
@@ -27,6 +35,11 @@ export function Sidebar({ visible }) {
             <NavLink
               to={item.ruta}
               end={item.ruta === '/'}
+              onClick={() => {
+                if (window.innerWidth <= 768 && onCerrar) {
+                  onCerrar();
+                }
+              }}
               className={({ isActive }) =>
                 `sidebar-enlace ${isActive ? 'sidebar-enlace-activo' : ''}`
               }

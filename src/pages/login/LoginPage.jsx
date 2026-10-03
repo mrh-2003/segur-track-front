@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useModal } from '../../hooks/useModal';
@@ -7,7 +6,7 @@ import { useAsync } from '../../hooks/useAsync';
 import { login } from '../../api/auth';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
-import ModalRecuperarClave from './ModalRecuperarClave';
+import { Icono } from '../../components/ui/Icono';
 import ModalCambioObligatorio from './ModalCambioObligatorio';
 import './LoginPage.css';
 
@@ -32,11 +31,11 @@ export default function LoginPage() {
 
   const abrirOlvideClave = (e) => {
     e.preventDefault();
-    abrirModal({
-      tipo: 'formulario',
-      titulo: 'Recuperar contraseña',
-      contenido: <ModalRecuperarClave onCerrar={cerrarModal} informar={informar} />,
-    });
+    informar(
+      'Recuperación de contraseña',
+      'Por políticas de seguridad de Segur Track, para restablecer su contraseña debe comunicarse con el Administrador del sistema (admin@segurtrack.com). El administrador reiniciará su acceso y su contraseña temporal volverá a ser su usuario/correo corporativo.',
+      'info'
+    );
   };
 
   const manejarSubmit = async (e) => {
@@ -46,9 +45,13 @@ export default function LoginPage() {
     await ejecutar(async () => {
       try {
         const resultado = await login(valores);
+        const correoNormalizado = valores.correo.trim().toLowerCase();
+        const claveIngresada = valores.clave.trim();
+        const esClavePorDefecto = correoNormalizado === claveIngresada;
+        const debeCambiar = Boolean(resultado.usuario?.debeCambiarClave) || esClavePorDefecto;
 
-        if (resultado.usuario?.debeCambiarClave) {
-          iniciarSesion(resultado.token, resultado.usuario);
+        if (debeCambiar) {
+          localStorage.setItem('token', resultado.token);
           abrirModal({
             tipo: 'formulario',
             titulo: 'Actualización obligatoria de contraseña',
@@ -56,6 +59,10 @@ export default function LoginPage() {
               <ModalCambioObligatorio
                 claveActual={valores.clave}
                 onExito={() => {
+                  iniciarSesion(resultado.token, {
+                    ...resultado.usuario,
+                    debeCambiarClave: false,
+                  });
                   cerrarModal();
                   navigate('/');
                 }}
@@ -142,9 +149,12 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="login-pie">
-          Uso exclusivo para personal autorizado de Segur Track
-        </p>
+        <div className="login-pie-contenedor">
+          <div className="login-pie-insignia">
+            <Icono nombre="escudo" tamano={15} color="var(--color-primario)" />
+            <span>Acceso seguro para personal autorizado de Segur Track</span>
+          </div>
+        </div>
       </div>
     </div>
   );
