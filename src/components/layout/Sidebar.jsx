@@ -1,20 +1,26 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import './Sidebar.css';
 
 const MENU = [
-  { ruta: '/', etiqueta: 'Inicio' },
-  { ruta: '/personal', etiqueta: 'Personal' },
-  { ruta: '/turnos', etiqueta: 'Turnos' },
-  { ruta: '/servicios', etiqueta: 'Servicios' },
-  { ruta: '/sedes', etiqueta: 'Sedes' },
-  { ruta: '/clientes', etiqueta: 'Clientes' },
-  { ruta: '/incidencias', etiqueta: 'Incidencias' },
-  { ruta: '/dashboard-bi', etiqueta: 'Dashboard BI' },
-  { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio' },
-  { ruta: '/reportes', etiqueta: 'Reportes' },
+  { ruta: '/', etiqueta: 'Inicio', roles: ['administrador', 'supervisor', 'operador'] },
+  { ruta: '/personal', etiqueta: 'Personal', roles: ['administrador'] },
+  { ruta: '/turnos', etiqueta: 'Turnos', roles: ['administrador', 'supervisor', 'operador'] },
+  { ruta: '/servicios', etiqueta: 'Servicios', roles: ['administrador', 'supervisor'] },
+  { ruta: '/sedes', etiqueta: 'Sedes', roles: ['administrador', 'supervisor'] },
+  { ruta: '/clientes', etiqueta: 'Clientes', roles: ['administrador', 'supervisor'] },
+  { ruta: '/incidencias', etiqueta: 'Incidencias', roles: ['administrador', 'supervisor', 'operador'] },
+  { ruta: '/dashboard-bi', etiqueta: 'Dashboard BI', roles: ['administrador'] },
+  { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio', roles: ['administrador'] },
+  { ruta: '/reportes', etiqueta: 'Reportes', roles: ['administrador'] },
 ];
 
 export function Sidebar({ visible, onCerrar }) {
+  const { usuario } = useAuth();
+  const rol = usuario?.rol || 'operador';
+
+  const menuFiltrado = MENU.filter((item) => item.roles.includes(rol));
+
   return (
     <nav className={`sidebar ${visible ? 'sidebar-visible' : 'sidebar-oculto'}`} aria-label="Navegación principal">
       <div className="sidebar-logo">
@@ -30,7 +36,7 @@ export function Sidebar({ visible, onCerrar }) {
         </button>
       </div>
       <ul className="sidebar-menu" role="list">
-        {MENU.map((item) => (
+        {menuFiltrado.map((item) => (
           <li key={item.ruta}>
             <NavLink
               to={item.ruta}

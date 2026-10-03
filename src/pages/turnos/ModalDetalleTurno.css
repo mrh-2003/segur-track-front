@@ -1,0 +1,143 @@
+.modal-detalle-turno {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detalle-turno-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-borde-suave);
+}
+
+.detalle-turno-servicio {
+  font-size: var(--tam-lg);
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.detalle-turno-sede {
+  font-size: var(--tam-sm);
+  color: var(--color-texto-tenue);
+  margin: 4px 0 0 0;
+}
+
+.bandeja-alerta {
+  padding: 14px 16px;
+  border-radius: var(--radio-md);
+  border-left: 4px solid transparent;
+}
+
+.bandeja-alerta-peligro {
+  background: var(--color-peligro-suave);
+  border-left-color: var(--color-peligro);
+  color: var(--color-peligro);
+}
+
+.bandeja-alerta-advertencia {
+  background: var(--color-advertencia-suave);
+  border-left-color: var(--color-advertencia);
+  color: var(--color-advertencia);
+}
+
+.bandeja-alerta-primario {
+  background: var(--color-primario-suave);
+  border-left-color: var(--color-primario);
+  color: var(--color-primario);
+}
+
+.bandeja-alerta-exito {
+  background: var(--color-exito-suave);
+  border-left-color: var(--color-exito);
+  color: var(--color-exito);
+}
+
+.bandeja-alerta-titulo {
+  font-size: var(--tam-sm);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bandeja-alerta-descripcion {
+  font-size: var(--tam-xs);
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.bandeja-alerta-motivo {
+  font-size: var(--tam-xs);
+  margin: 8px 0 0 0;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}
+
+.detalle-turno-datos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  background: var(--color-fondo-panel);
+  padding: 14px;
+  border-radius: var(--radio-md);
+  border: 1px solid var(--color-borde-suave);
+}
+
+@media (max-width: 600px) {
+  .detalle-turno-datos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detalle-dato-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detalle-dato-etiqueta {
+  font-size: var(--tam-xs);
+  color: var(--color-texto-tenue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalle-dato-valor {
+  font-size: var(--tam-sm);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.formulario-subaccion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.textarea-motivo {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.detalle-acciones-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-borde-suave);
+  flex-wrap: wrap;
+}
+
+.acciones-izquierda,
+.acciones-derecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

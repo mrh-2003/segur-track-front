@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { resumenInicio, actividadOperativa, actividadReciente } from '../../api/inicio';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { useModal } from '../../hooks/useModal';
+import { useAuth } from '../../hooks/useAuth';
 import { Icono } from '../../components/ui/Icono';
 import { formatearFechaHora } from '../../utils/fechas';
 import GraficoActividadOperativa from './GraficoActividadOperativa';
@@ -22,20 +23,28 @@ export default function InicioPage() {
   const [cargando, setCargando] = useState(true);
   const navigate = useNavigate();
   const { informar } = useModal();
+  const { usuario } = useAuth();
+
+  const esAdmin = usuario?.rol === 'administrador';
+  const esOperador = usuario?.rol === 'operador';
 
   useEffect(() => {
     let activo = true;
     (async () => {
       try {
-        const [res, act, rec] = await Promise.all([
+        const peticiones = [
           resumenInicio(),
           actividadOperativa(),
-          actividadReciente(),
-        ]);
+        ];
+        if (!esOperador) {
+          peticiones.push(actividadReciente());
+        }
+
+        const [res, act, rec] = await Promise.all(peticiones);
         if (activo) {
           setResumen(res);
           setActividad(act);
-          setRecientes(rec);
+          if (rec) setRecientes(rec);
         }
       } catch (err) {
         if (activo) informar('Error', err.message, 'error');
@@ -46,7 +55,7 @@ export default function InicioPage() {
     return () => {
       activo = false;
     };
-  }, [informar]);
+  }, [informar, esOperador]);
 
   return (
     <div className="fade-in">
@@ -64,64 +73,68 @@ export default function InicioPage() {
         <KpiCard titulo="T. prom. atención" valor={resumen?.tiempo_prom_atencion ? `${resumen.tiempo_prom_atencion} min` : null} color="advertencia" cargando={cargando} />
       </div>
 
-      <div className="grilla-contenido grilla-2-1">
+      <div className={`grilla-contenido ${esAdmin ? 'grilla-2-1' : ''}`}>
         <div className="tarjeta">
           <h3 className="tarjeta-titulo">Actividad operativa</h3>
           <p className="tarjeta-subtitulo">Eventos de las últimas 24 horas</p>
           <GraficoActividadOperativa datos={actividad} cargando={cargando} />
         </div>
 
-        <div className="tarjeta">
-          <h3 className="tarjeta-titulo">Accesos rápidos</h3>
-          <div className="accesos-grid">
-            {ACCESOS.map((a) => (
-              <button
-                key={a.ruta}
-                className="acceso-btn"
-                onClick={() => navigate(a.ruta, a.modal ? { state: { abrirModal: true } } : undefined)}
-              >
-                <span className="acceso-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icono nombre={a.icono} tamano={20} />
-                </span>
-                <span className="acceso-label">{a.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="tarjeta">
-        <h3 className="tarjeta-titulo" style={{ marginBottom: 12 }}>Actividad reciente</h3>
-        {recientes.length === 0 ? (
-          <p style={{ color: 'var(--color-texto-tenue)', fontSize: 'var(--tam-sm)' }}>Sin actividad reciente</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {recientes.map((r, i) => {
-              const iconoTipo = r.tipo?.includes('incidencia')
-                ? 'incidencias'
-                : r.tipo?.includes('turno')
-                ? 'turnos'
-                : r.tipo?.includes('servicio')
-                ? 'servicios'
-                : 'personal';
-
-              return (
-                <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-borde-suave)', alignItems: 'center' }}>
-                  <div className="actividad-icono" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: 'var(--color-fondo-panel)' }}>
-                    <Icono nombre={iconoTipo} tamano={16} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-principal)', margin: 0 }}>{r.descripcion}</p>
-                    <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)', margin: '2px 0 0 0' }}>
-                      {formatearFechaHora(r.creado_en)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+        {esAdmin && (
+          <div className="tarjeta">
+            <h3 className="tarjeta-titulo">Accesos rápidos</h3>
+            <div className="accesos-grid">
+              {ACCESOS.map((a) => (
+                <button
+                  key={a.ruta}
+                  className="acceso-btn"
+                  onClick={() => navigate(a.ruta, a.modal ? { state: { abrirModal: true } } : undefined)}
+                >
+                  <span className="acceso-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icono nombre={a.icono} tamano={20} />
+                  </span>
+                  <span className="acceso-label">{a.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
+
+      {!esOperador && (
+        <div className="tarjeta">
+          <h3 className="tarjeta-titulo" style={{ marginBottom: 12 }}>Actividad reciente</h3>
+          {recientes.length === 0 ? (
+            <p style={{ color: 'var(--color-texto-tenue)', fontSize: 'var(--tam-sm)' }}>Sin actividad reciente</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {recientes.map((r, i) => {
+                const iconoTipo = r.tipo?.includes('incidencia')
+                  ? 'incidencias'
+                  : r.tipo?.includes('turno')
+                  ? 'turnos'
+                  : r.tipo?.includes('servicio')
+                  ? 'servicios'
+                  : 'personal';
+
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-borde-suave)', alignItems: 'center' }}>
+                    <div className="actividad-icono" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: '50%', background: 'var(--color-fondo-panel)' }}>
+                      <Icono nombre={iconoTipo} tamano={16} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 'var(--tam-sm)', color: 'var(--color-texto-principal)', margin: 0 }}>{r.descripcion}</p>
+                      <p style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-tenue)', margin: '2px 0 0 0' }}>
+                        {formatearFechaHora(r.creado_en)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

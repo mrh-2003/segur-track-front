@@ -18,20 +18,28 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/" element={<InicioPage />} />
-            <Route path="/personal" element={<PersonalPage />} />
-            <Route path="/sedes" element={<SedesPage />} />
-            <Route path="/clientes" element={<ClientesPage />} />
             <Route path="/turnos" element={<TurnosPage />} />
-            <Route path="/servicios" element={<ServiciosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />
-            <Route path="/dashboard-bi" element={<DashboardBIPage />} />
-            <Route path="/monitor-multicriterio" element={<MonitorMulticriterioPage />} />
-            <Route path="/reportes" element={<ReportesPage />} />
+
+            <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'supervisor']} />}>
+              <Route path="/servicios" element={<ServiciosPage />} />
+              <Route path="/sedes" element={<SedesPage />} />
+              <Route path="/clientes" element={<ClientesPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute rolesPermitidos={['administrador']} />}>
+              <Route path="/personal" element={<PersonalPage />} />
+              <Route path="/dashboard-bi" element={<DashboardBIPage />} />
+              <Route path="/monitor-multicriterio" element={<MonitorMulticriterioPage />} />
+              <Route path="/reportes" element={<ReportesPage />} />
+            </Route>
           </Route>
         </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

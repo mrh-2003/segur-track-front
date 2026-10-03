@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
+import { useAuth } from '../../hooks/useAuth';
 import {
   listarTurnos, resumenTurnos, alertasTurnos,
-  crearTurno, confirmarTurno, eliminarTurno, listarSedesTurnos,
+  crearTurno, confirmarTurno, rechazarTurno, reasignarTurno, eliminarTurno, listarSedesTurnos,
 } from '../../api/turnos';
 import { listarPersonal } from '../../api/personal';
 import { listarServicios } from '../../api/servicios';
@@ -14,6 +15,7 @@ import { Select } from '../../components/ui/Select';
 import { Icono } from '../../components/ui/Icono';
 import { formatearFecha } from '../../utils/fechas';
 import FormTurno from './FormTurno';
+import ModalDetalleTurno from './ModalDetalleTurno';
 import './TurnosPage.css';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -62,7 +64,11 @@ export default function TurnosPage() {
   const [cargando, setCargando] = useState(true);
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
+  const { usuario } = useAuth();
   const location = useLocation();
+
+  const esOperador = usuario?.rol === 'operador';
+  const puedeAsignar = !esOperador;
 
   const semana = obtenerSemana(semanaBase);
 
@@ -76,8 +82,8 @@ export default function TurnosPage() {
         resumenTurnos(),
         alertasTurnos(),
         listarSedesTurnos(),
-        listarPersonal({ estado: 'activo' }),
-        listarServicios(),
+        listarPersonal({ estado: 'activo', limite: 100 }),
+        listarServicios({ limite: 100 }),
       ]);
       setTurnos(listaTurnos || []);
       setResumen(res);
@@ -94,6 +100,80 @@ export default function TurnosPage() {
     void cargar();
   }, [cargar]);
 
+  const manejarConfirmar = useCallback(async (turno) => {
+    await ejecutar(async () => {
+      try {
+        await confirmarTurno(turno.id);
+        cerrarModal();
+        await cargar();
+        informar('Turno confirmado', 'El turno ha pasado a estado pendiente para su ejecución.', 'exito');
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
+    });
+  }, [cargar, cerrarModal, ejecutar, informar]);
+
+  const manejarRechazar = useCallback(async (turno, motivo) => {
+    await ejecutar(async () => {
+      try {
+        await rechazarTurno(turno.id, motivo);
+        cerrarModal();
+        await cargar();
+        informar('Turno rechazado', 'El turno está ahora en relevo pendiente para reasignación por supervisión.', 'advertencia');
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
+    });
+  }, [cargar, cerrarModal, ejecutar, informar]);
+
+  const manejarReasignar = useCallback(async (turno, nuevoPersonalId) => {
+    await ejecutar(async () => {
+      try {
+        await reasignarTurno(turno.id, nuevoPersonalId);
+        cerrarModal();
+        await cargar();
+        informar('Turno reasignado', 'El turno fue reasignado y enviado a la bandeja del nuevo agente.', 'exito');
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
+    });
+  }, [cargar, cerrarModal, ejecutar, informar]);
+
+  const manejarEliminar = useCallback((turno) => {
+    confirmar(`¿Eliminar el turno de ${turno.personal} del ${formatearFecha(turno.fecha)}?`, async () => {
+      await ejecutar(async () => {
+        try {
+          await eliminarTurno(turno.id);
+          cerrarModal();
+          await cargar();
+          informar('Turno eliminado', 'El turno fue eliminado correctamente.', 'exito');
+        } catch (err) {
+          informar('Error', err.message, 'error');
+        }
+      });
+    }, { titulo: 'Eliminar turno', variante: 'peligro' });
+  }, [cargar, cerrarModal, confirmar, ejecutar, informar]);
+
+  const abrirDetalleTurno = useCallback((t) => {
+    abrirModal({
+      tipo: 'formulario',
+      titulo: 'Detalle de turno',
+      contenido: (
+        <ModalDetalleTurno
+          turno={t}
+          usuario={usuario}
+          personal={personal}
+          onConfirmar={manejarConfirmar}
+          onRechazar={manejarRechazar}
+          onReasignar={manejarReasignar}
+          onEliminar={manejarEliminar}
+          onCerrar={cerrarModal}
+          cargando={cargandoAccion}
+        />
+      ),
+    });
+  }, [abrirModal, cargandoAccion, cerrarModal, manejarConfirmar, manejarEliminar, manejarReasignar, manejarRechazar, personal, usuario]);
+
   const abrirFormulario = useCallback(() => {
     abrirModal({
       tipo: 'formulario',
@@ -109,7 +189,7 @@ export default function TurnosPage() {
                 await crearTurno(datos);
                 cerrarModal();
                 await cargar();
-                informar('Turno asignado', 'Turno registrado correctamente', 'exito');
+                informar('Turno asignado', 'Turno registrado correctamente en estado sin confirmar', 'exito');
               } catch (err) {
                 informar('Error', err.message, 'error');
               }
@@ -123,40 +203,14 @@ export default function TurnosPage() {
   }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, personal, servicios, sedes]);
 
   useEffect(() => {
-    if (location.state?.abrirModal && personal.length > 0) {
+    if (location.state?.abrirModal && personal.length > 0 && puedeAsignar) {
       window.history.replaceState({}, document.title);
       const timer = setTimeout(() => {
         abrirFormulario();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [location.state, personal.length, abrirFormulario]);
-
-  const manejarConfirmar = (turno) => {
-    confirmar(`¿Confirmar el turno de ${turno.personal}?`, async () => {
-      await ejecutar(async () => {
-        try {
-          await confirmarTurno(turno.id);
-          await cargar();
-        } catch (err) {
-          informar('Error', err.message, 'error');
-        }
-      });
-    }, { titulo: 'Confirmar turno' });
-  };
-
-  const manejarEliminar = (turno) => {
-    confirmar(`¿Eliminar el turno de ${turno.personal} del ${formatearFecha(turno.fecha)}?`, async () => {
-      await ejecutar(async () => {
-        try {
-          await eliminarTurno(turno.id);
-          await cargar();
-        } catch (err) {
-          informar('Error', err.message, 'error');
-        }
-      });
-    }, { titulo: 'Eliminar turno', variante: 'peligro' });
-  };
+  }, [location.state, personal.length, puedeAsignar, abrirFormulario]);
 
   const turnosPorPersona = (turnos || []).reduce((acc, t) => {
     const key = t.personal_id;
@@ -179,7 +233,9 @@ export default function TurnosPage() {
           <h1 className="pagina-titulo">Turnos</h1>
           <p className="pagina-subtitulo">Planificación y control de turnos</p>
         </div>
-        <Button variante="primario" onClick={abrirFormulario}>+ Asignar turno</Button>
+        {puedeAsignar && (
+          <Button variante="primario" onClick={abrirFormulario}>+ Asignar turno</Button>
+        )}
       </div>
 
       <div className="grilla-kpi grilla-kpi-3">
@@ -213,7 +269,7 @@ export default function TurnosPage() {
                       <div className="turnos-dia-fecha">{formatearFecha(dia).slice(0, 5)}</div>
                     </th>
                   ))}
-                  <th className="turnos-th-acciones">Acciones</th>
+                  <th className="turnos-th-acciones">Detalle</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,10 +287,32 @@ export default function TurnosPage() {
                           <td key={dia} className="turnos-td-dia">
                             {t && (
                               <div
-                                className={`turno-chip turno-chip-${t.estado}`}
-                                title={`${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)}) - Estado: ${t.estado}`}
+                                className={`turno-chip ${
+                                  t.relevo_pendiente
+                                    ? 'turno-chip-relevo'
+                                    : t.estado === 'sin_confirmar'
+                                    ? 'turno-chip-sin_confirmar'
+                                    : t.estado === 'pendiente'
+                                    ? 'turno-chip-pendiente'
+                                    : t.estado === 'cumplido'
+                                    ? 'turno-chip-cumplido'
+                                    : 'turno-chip-programado'
+                                }`}
+                                onClick={() => abrirDetalleTurno(t)}
+                                title={`Click para ver detalle del turno\n${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)})\nEstado: ${t.relevo_pendiente ? 'Relevo pendiente' : t.estado}`}
                               >
-                                {t.hora_inicio?.slice(0, 5)}
+                                <span className="turno-chip-hora">{t.hora_inicio?.slice(0, 5)}</span>
+                                <span className="turno-chip-tag">
+                                  {t.relevo_pendiente
+                                    ? 'Relevo'
+                                    : t.estado === 'sin_confirmar'
+                                    ? 'Por confirmar'
+                                    : t.estado === 'pendiente'
+                                    ? 'Pendiente'
+                                    : t.estado === 'cumplido'
+                                    ? 'Cumplido'
+                                    : 'Programado'}
+                                </span>
                               </div>
                             )}
                           </td>
@@ -242,15 +320,23 @@ export default function TurnosPage() {
                       })}
                       <td className="turnos-td-acciones">
                         {Object.values(p.turnos).slice(0, 1).map((t) => (
-                          <div key={t.id} style={{ display: 'flex', gap: 4 }}>
-                            {t.estado === 'sin_confirmar' && (
-                              <button className="accion-btn" onClick={() => manejarConfirmar(t)} title="Confirmar">
-                                <Icono nombre="confirmar" tamano={13} />
+                          <div key={t.id} style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                            <button
+                              className="accion-btn"
+                              onClick={() => abrirDetalleTurno(t)}
+                              title="Ver información del turno y bandeja"
+                            >
+                              <Icono nombre="servicios" tamano={13} />
+                            </button>
+                            {puedeAsignar && (
+                              <button
+                                className="accion-btn accion-btn-peligro"
+                                onClick={() => manejarEliminar(t)}
+                                title="Eliminar"
+                              >
+                                <Icono nombre="eliminar" tamano={13} />
                               </button>
                             )}
-                            <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(t)} title="Eliminar">
-                              <Icono nombre="eliminar" tamano={13} />
-                            </button>
                           </div>
                         ))}
                       </td>
