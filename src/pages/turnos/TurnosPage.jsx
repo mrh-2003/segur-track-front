@@ -5,7 +5,7 @@ import { useAsync } from '../../hooks/useAsync';
 import { useAuth } from '../../hooks/useAuth';
 import {
   listarTurnos, resumenTurnos, alertasTurnos,
-  crearTurno, confirmarTurno, rechazarTurno, reasignarTurno, eliminarTurno, listarSedesTurnos,
+  crearTurno, confirmarTurno, cumplirTurno, rechazarTurno, reasignarTurno, eliminarTurno, listarSedesTurnos,
 } from '../../api/turnos';
 import { listarPersonal } from '../../api/personal';
 import { listarServicios } from '../../api/servicios';
@@ -100,13 +100,26 @@ export default function TurnosPage() {
     void cargar();
   }, [cargar]);
 
+  const manejarCumplir = useCallback(async (turno, evidenciasUrls) => {
+    await ejecutar(async () => {
+      try {
+        await cumplirTurno(turno.id, evidenciasUrls);
+        cerrarModal();
+        await cargar();
+        informar('Turno cumplido', `El turno ha sido completado con éxito con ${evidenciasUrls.length} evidencia(s) fotográfica(s).`, 'exito');
+      } catch (err) {
+        informar('Error al culminar turno', err.message, 'error');
+      }
+    });
+  }, [cargar, cerrarModal, ejecutar, informar]);
+
   const manejarConfirmar = useCallback(async (turno) => {
     await ejecutar(async () => {
       try {
         await confirmarTurno(turno.id);
         cerrarModal();
         await cargar();
-        informar('Turno confirmado', 'El turno ha pasado a estado pendiente para su ejecución.', 'exito');
+        informar('Turno confirmado', 'El turno ha sido confirmado. Ya puede cargar las evidencias fotográficas para culminarlo.', 'exito');
       } catch (err) {
         informar('Error', err.message, 'error');
       }
@@ -164,6 +177,7 @@ export default function TurnosPage() {
           usuario={usuario}
           personal={personal}
           onConfirmar={manejarConfirmar}
+          onCumplir={manejarCumplir}
           onRechazar={manejarRechazar}
           onReasignar={manejarReasignar}
           onEliminar={manejarEliminar}
@@ -172,7 +186,7 @@ export default function TurnosPage() {
         />
       ),
     });
-  }, [abrirModal, cargandoAccion, cerrarModal, manejarConfirmar, manejarEliminar, manejarReasignar, manejarRechazar, personal, usuario]);
+  }, [abrirModal, cargandoAccion, cerrarModal, manejarConfirmar, manejarCumplir, manejarEliminar, manejarReasignar, manejarRechazar, personal, usuario]);
 
   const abrirFormulario = useCallback(() => {
     abrirModal({
@@ -283,6 +297,7 @@ export default function TurnosPage() {
                       <td className="turnos-td-persona">{p.nombre}</td>
                       {semana.dias.map((dia) => {
                         const t = p.turnos[dia];
+                        const cantEvidencias = Array.isArray(t?.evidencias) ? t.evidencias.length : 0;
                         return (
                           <td key={dia} className="turnos-td-dia">
                             {t && (
@@ -292,6 +307,8 @@ export default function TurnosPage() {
                                     ? 'turno-chip-relevo'
                                     : t.estado === 'sin_confirmar'
                                     ? 'turno-chip-sin_confirmar'
+                                    : t.estado === 'confirmado'
+                                    ? 'turno-chip-confirmado'
                                     : t.estado === 'pendiente'
                                     ? 'turno-chip-pendiente'
                                     : t.estado === 'cumplido'
@@ -299,7 +316,7 @@ export default function TurnosPage() {
                                     : 'turno-chip-programado'
                                 }`}
                                 onClick={() => abrirDetalleTurno(t)}
-                                title={`Click para ver detalle del turno\n${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)})\nEstado: ${t.relevo_pendiente ? 'Relevo pendiente' : t.estado}`}
+                                title={`Click para ver detalle del turno\n${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)})\nEstado: ${t.relevo_pendiente ? 'Relevo pendiente' : t.estado}${cantEvidencias > 0 ? `\n${cantEvidencias} foto(s) de evidencia cargada(s)` : ''}`}
                               >
                                 <span className="turno-chip-hora">{t.hora_inicio?.slice(0, 5)}</span>
                                 <span className="turno-chip-tag">
@@ -307,12 +324,20 @@ export default function TurnosPage() {
                                     ? 'Relevo'
                                     : t.estado === 'sin_confirmar'
                                     ? 'Por confirmar'
+                                    : t.estado === 'confirmado'
+                                    ? 'Confirmado'
                                     : t.estado === 'pendiente'
                                     ? 'Pendiente'
                                     : t.estado === 'cumplido'
                                     ? 'Cumplido'
                                     : 'Programado'}
                                 </span>
+                                {cantEvidencias > 0 && (
+                                  <span className="turno-chip-evidencias-indicador" title={`${cantEvidencias} evidencia(s) cargada(s)`}>
+                                    <Icono nombre="camara" tamano={10} />
+                                    <span>{cantEvidencias}</span>
+                                  </span>
+                                )}
                               </div>
                             )}
                           </td>

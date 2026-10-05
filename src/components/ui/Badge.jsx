@@ -33,6 +33,7 @@ const ETIQUETAS = {
   baja:          'Baja',
   completado:    'Completado',
   procesando:    'Procesando',
+  confirmado:    'Confirmado',
   sin_confirmar: 'Sin confirmar',
   cumplido:      'Cumplido',
   pendiente:     'Pendiente',
