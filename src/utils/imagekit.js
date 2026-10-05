@@ -22,7 +22,8 @@ const obtenerParametrosAuth = async () => {
     if (auth && auth.signature && auth.token && auth.expire) {
       return auth;
     }
-  } catch {
+  } catch (error) {
+    void error;
   }
 
   const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

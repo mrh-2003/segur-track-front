@@ -50,6 +50,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         <Select id="form-cargo" label="Cargo" nombre="cargo" valor={valores.cargo}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.cargo}
           placeholder="Seleccionar cargo" requerido>
+          <option value="jefe_operaciones">Jefe de Operaciones</option>
           <option value="supervisor">Supervisor</option>
           <option value="agente">Agente</option>
           <option value="administrativo">Administrativo</option>

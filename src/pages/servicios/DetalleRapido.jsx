@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { formatearFecha } from '../../utils/fechas';
 import './DetalleRapido.css';
 
-export default function DetalleRapido({ servicio, onEditar }) {
+export default function DetalleRapido({ servicio, onEditar, onVerDetalleOperativo }) {
   if (!servicio) {
     return (
       <div className="tarjeta detalle-rapido detalle-vacio">
@@ -50,9 +50,24 @@ export default function DetalleRapido({ servicio, onEditar }) {
           </div>
         )}
       </dl>
-      <Button variante="primario" onClick={onEditar} tamano="sm" style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}>
-        Editar / Ver detalle
-      </Button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+        <Button
+          variante="primario"
+          onClick={() => onVerDetalleOperativo && onVerDetalleOperativo(servicio)}
+          tamano="sm"
+          style={{ width: '100%', justifyContent: 'center' }}
+        >
+          Detalle operativo y protocolos
+        </Button>
+        <Button
+          variante="secundario"
+          onClick={onEditar}
+          tamano="sm"
+          style={{ width: '100%', justifyContent: 'center' }}
+        >
+          Editar servicio
+        </Button>
+      </div>
     </div>
   );
 }

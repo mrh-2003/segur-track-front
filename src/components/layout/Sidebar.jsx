@@ -3,16 +3,16 @@ import { useAuth } from '../../hooks/useAuth';
 import './Sidebar.css';
 
 const MENU = [
-  { ruta: '/', etiqueta: 'Inicio', roles: ['administrador', 'supervisor', 'operador'] },
-  { ruta: '/personal', etiqueta: 'Personal', roles: ['administrador'] },
-  { ruta: '/turnos', etiqueta: 'Turnos', roles: ['administrador', 'supervisor', 'operador'] },
-  { ruta: '/servicios', etiqueta: 'Servicios', roles: ['administrador', 'supervisor'] },
-  { ruta: '/sedes', etiqueta: 'Sedes', roles: ['administrador', 'supervisor'] },
-  { ruta: '/clientes', etiqueta: 'Clientes', roles: ['administrador', 'supervisor'] },
-  { ruta: '/incidencias', etiqueta: 'Incidencias', roles: ['administrador', 'supervisor', 'operador'] },
-  { ruta: '/dashboard-bi', etiqueta: 'Dashboard BI', roles: ['administrador'] },
-  { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio', roles: ['administrador'] },
-  { ruta: '/reportes', etiqueta: 'Reportes', roles: ['administrador'] },
+  { ruta: '/', etiqueta: 'Inicio', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
+  { ruta: '/personal', etiqueta: 'Personal', roles: ['administrador', 'jefe_operaciones'] },
+  { ruta: '/turnos', etiqueta: 'Turnos', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
+  { ruta: '/servicios', etiqueta: 'Servicios', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/sedes', etiqueta: 'Sedes', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/clientes', etiqueta: 'Clientes', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/incidencias', etiqueta: 'Incidencias', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
+  { ruta: '/dashboard-bi', etiqueta: 'Dashboard BI', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/reportes', etiqueta: 'Reportes', roles: ['administrador', 'jefe_operaciones'] },
 ];
 
 export function Sidebar({ visible, onCerrar }) {

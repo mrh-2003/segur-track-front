@@ -176,7 +176,7 @@ export default function PersonalPage() {
           <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
             <Icono nombre="editar" tamano={14} />
           </button>
-          {usuario?.rol === 'administrador' && (
+          {(usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones') && (
             <button
               className="accion-btn"
               onClick={() => manejarReiniciarClave(f)}

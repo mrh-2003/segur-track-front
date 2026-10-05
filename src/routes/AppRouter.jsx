@@ -25,16 +25,16 @@ export function AppRouter() {
             <Route path="/turnos" element={<TurnosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />
 
-            <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'supervisor']} />}>
+            <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones', 'supervisor']} />}>
               <Route path="/servicios" element={<ServiciosPage />} />
               <Route path="/sedes" element={<SedesPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
-            </Route>
-
-            <Route element={<ProtectedRoute rolesPermitidos={['administrador']} />}>
-              <Route path="/personal" element={<PersonalPage />} />
               <Route path="/dashboard-bi" element={<DashboardBIPage />} />
               <Route path="/monitor-multicriterio" element={<MonitorMulticriterioPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones']} />}>
+              <Route path="/personal" element={<PersonalPage />} />
               <Route path="/reportes" element={<ReportesPage />} />
             </Route>
           </Route>

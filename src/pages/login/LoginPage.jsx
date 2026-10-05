@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Icono } from '../../components/ui/Icono';
 import ModalCambioObligatorio from './ModalCambioObligatorio';
+import ModalRecuperarClave from './ModalRecuperarClave';
 import './LoginPage.css';
 
 const validar = (valores) => {
@@ -31,11 +32,17 @@ export default function LoginPage() {
 
   const abrirOlvideClave = (e) => {
     e.preventDefault();
-    informar(
-      'Recuperación de contraseña',
-      'Por políticas de seguridad de Segur Track, para restablecer su contraseña debe comunicarse con el Administrador del sistema (admin@segurtrack.com). El administrador reiniciará su acceso y su contraseña temporal volverá a ser su usuario/correo corporativo.',
-      'info'
-    );
+    abrirModal({
+      tipo: 'formulario',
+      titulo: 'Recuperar contraseña',
+      contenido: (
+        <ModalRecuperarClave
+          onExito={cerrarModal}
+          onCancelar={cerrarModal}
+          informar={informar}
+        />
+      ),
+    });
   };
 
   const manejarSubmit = async (e) => {

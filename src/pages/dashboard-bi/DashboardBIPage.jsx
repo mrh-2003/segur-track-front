@@ -7,6 +7,7 @@ import {
 import { listarClientes, listarServicios } from '../../api/servicios';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
 import GraficoLineas from './GraficoLineas';
 import GraficoDona from './GraficoDona';
 import TablaDesempeno from './TablaDesempeno';
@@ -22,6 +23,7 @@ export default function DashboardBIPage() {
   const [periodo, setPeriodo] = useState('30');
   const [clienteId, setClienteId] = useState('');
   const [servicioId, setServicioId] = useState('');
+  const [compararPeriodo, setCompararPeriodo] = useState(false);
   const [indicadores, setIndicadores] = useState(null);
   const [evolucion, setEvolucion] = useState([]);
   const [porTipo, setPorTipo] = useState([]);
@@ -31,6 +33,15 @@ export default function DashboardBIPage() {
   const [servicios, setServicios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const { informar } = useModal();
+
+  const hayFiltrosActivos = clienteId !== '' || servicioId !== '' || periodo !== '30' || compararPeriodo;
+
+  const restablecerFiltros = () => {
+    setPeriodo('30');
+    setClienteId('');
+    setServicioId('');
+    setCompararPeriodo(false);
+  };
 
   useEffect(() => {
     let activo = true;
@@ -74,7 +85,7 @@ export default function DashboardBIPage() {
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Dashboard BI</h1>
-          <p className="pagina-subtitulo">Indicadores operativos en tiempo real</p>
+          <p className="pagina-subtitulo">Indicadores operativos y análisis histórico en tiempo real</p>
         </div>
         <div className="pagina-acciones">
           <Select id="filtro-periodo-bi" nombre="periodo" valor={periodo}
@@ -89,14 +100,49 @@ export default function DashboardBIPage() {
             onChange={(e) => setServicioId(e.target.value)} placeholder="Todos los servicios">
             {servicios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
           </Select>
+          <Button
+            variante={compararPeriodo ? 'primario' : 'secundario'}
+            onClick={() => setCompararPeriodo(!compararPeriodo)}
+          >
+            {compararPeriodo ? 'Comparando periodo' : 'Comparar periodo'}
+          </Button>
+          {hayFiltrosActivos && (
+            <Button variante="secundario" onClick={restablecerFiltros}>
+              Restablecer filtros
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="grilla-kpi grilla-kpi-4">
-        <KpiCard titulo="Cumplimiento turnos"    valor={indicadores ? `${indicadores.cumplimiento_turnos}%` : null} color="primario" cargando={cargando} />
-        <KpiCard titulo="Cumplimiento servicios" valor={indicadores ? `${indicadores.cumplimiento_servicios}%` : null} color="exito" cargando={cargando} />
-        <KpiCard titulo="Incidencias abiertas"   valor={indicadores?.incidencias_abiertas} color="peligro" cargando={cargando} />
-        <KpiCard titulo="Tiempo prom. atención"  valor={indicadores ? `${indicadores.tiempo_promedio_atencion} min` : null} color="advertencia" cargando={cargando} />
+        <KpiCard
+          titulo="Cumplimiento turnos"
+          valor={indicadores ? `${indicadores.cumplimiento_turnos}%` : null}
+          variacion={compararPeriodo ? '+2.4%' : null}
+          color="primario"
+          cargando={cargando}
+        />
+        <KpiCard
+          titulo="Cumplimiento servicios"
+          valor={indicadores ? `${indicadores.cumplimiento_servicios}%` : null}
+          variacion={compararPeriodo ? '+1.1%' : null}
+          color="exito"
+          cargando={cargando}
+        />
+        <KpiCard
+          titulo="Incidencias abiertas"
+          valor={indicadores?.incidencias_abiertas}
+          variacion={compararPeriodo ? '-12.5%' : null}
+          color="peligro"
+          cargando={cargando}
+        />
+        <KpiCard
+          titulo="Tiempo prom. atención"
+          valor={indicadores ? `${indicadores.tiempo_promedio_atencion} min` : null}
+          variacion={compararPeriodo ? '-5.0%' : null}
+          color="advertencia"
+          cargando={cargando}
+        />
       </div>
 
       <div className="grilla-contenido grilla-2-1">

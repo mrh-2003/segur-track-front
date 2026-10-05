@@ -60,7 +60,7 @@ export default function IncidenciasPage() {
   const [tipos, setTipos] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [filtros, setFiltros] = useState({ q: '', tipoId: '', estado: '' });
+  const [filtros, setFiltros] = useState({ q: '', tipoId: '', estado: '', servicioId: '' });
   const { abrirModal, cerrarModal, confirmar, informar } = useModal();
   const { cargando: cargandoAccion, ejecutar } = useAsync();
   const location = useLocation();
@@ -72,6 +72,7 @@ export default function IncidenciasPage() {
       if (filtros.q) params.q = filtros.q;
       if (filtros.tipoId) params.tipoId = filtros.tipoId;
       if (filtros.estado) params.estado = filtros.estado;
+      if (filtros.servicioId) params.servicioId = filtros.servicioId;
 
       const [lista, res, rec, listaTipos, listaServicios] = await Promise.all([
         listarIncidencias(params),
@@ -137,6 +138,55 @@ export default function IncidenciasPage() {
     }
   }, [location.state, tipos.length, abrirFormulario]);
 
+  const abrirObservacion = (item) => {
+    let obsTexto = item.observacion || '';
+    abrirModal({
+      tipo: 'formulario',
+      titulo: `Observaciones y acciones - ${item.codigo}`,
+      contenido: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <p style={{ margin: 0, fontSize: 'var(--tam-sm)', color: 'var(--color-texto-secundario)' }}>
+            Registre las acciones tomadas o seguimiento realizado para esta incidencia.
+          </p>
+          <div className="campo">
+            <label className="campo-etiqueta" htmlFor="obs-inc">Acción tomada / Observación</label>
+            <textarea
+              id="obs-inc"
+              className="campo-input"
+              rows={4}
+              defaultValue={obsTexto}
+              onChange={(e) => { obsTexto = e.target.value; }}
+              placeholder="Detalle de la acción realizada..."
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+            <Button variante="secundario" onClick={cerrarModal} disabled={cargandoAccion}>
+              Cancelar
+            </Button>
+            <Button
+              variante="primario"
+              cargando={cargandoAccion}
+              onClick={async () => {
+                await ejecutar(async () => {
+                  try {
+                    await actualizarIncidencia(item.id, { observacion: obsTexto });
+                    cerrarModal();
+                    await cargar();
+                    informar('Guardado', 'Observación registrada correctamente', 'exito');
+                  } catch (err) {
+                    informar('Error', err.message, 'error');
+                  }
+                });
+              }}
+            >
+              Guardar acción
+            </Button>
+          </div>
+        </div>
+      ),
+    });
+  };
+
   const manejarCambiarEstado = (item, nuevoEstado) => {
     confirmar(`¿Cambiar estado de ${item.codigo} a "${nuevoEstado}"?`, async () => {
       await ejecutar(async () => {
@@ -187,6 +237,9 @@ export default function IncidenciasPage() {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
         <div style={{ display: 'flex', gap: 6 }}>
+          <button className="accion-btn" onClick={() => abrirObservacion(f)} title="Acciones y observaciones">
+            <Icono nombre="actividad" tamano={13} />
+          </button>
           {f.estado === 'abierta' && (
             <button className="accion-btn" onClick={() => manejarCambiarEstado(f, 'en_atencion')} title="Atender">
               <Icono nombre="play" tamano={13} />
@@ -242,6 +295,11 @@ export default function IncidenciasPage() {
               placeholder="Todos los tipos">
               {tipos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
             </Select>
+            <Select id="filtro-servicio-inc" nombre="servicioId" valor={filtros.servicioId}
+              onChange={(e) => setFiltros((f) => ({ ...f, servicioId: e.target.value }))}
+              placeholder="Todos los servicios">
+              {servicios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </Select>
             <Select id="filtro-estado-inc" nombre="estado" valor={filtros.estado}
               onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
               placeholder="Todos los estados">
@@ -250,7 +308,7 @@ export default function IncidenciasPage() {
               <option value="cerrada">Cerrada</option>
             </Select>
           </div>
-          <Table columnas={columnas} datos={incidencias} cargando={cargando} vacio="Sin incidencias registradas" />
+          <Table columnas={columnas} datos={incidencias} cargando={cargando} vacio="No se encontraron incidencias con los criterios seleccionados." />
         </div>
 
         <PanelRecientes items={recientes} cargando={cargando} />

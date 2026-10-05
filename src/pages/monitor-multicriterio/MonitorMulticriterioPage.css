@@ -84,5 +84,189 @@
 .barra-alerta { background: var(--color-peligro); }
 .barra-ok     { background: var(--color-exito); }
 
-.accion-btn { background: none; border: 1px solid var(--color-borde); border-radius: var(--radio-sm); padding: 4px 8px; cursor: pointer; font-size: var(--tam-xs); transition: background var(--transicion); color: var(--color-primario); }
+.accion-btn {
+  background: none;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--tam-xs);
+  transition: background var(--transicion);
+  color: var(--color-primario);
+}
 .accion-btn:hover { background: var(--color-primario-suave); }
+
+.seccion-indicadores-titulo {
+  font-size: var(--tam-lg);
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin-top: 24px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.indicador-badge-count {
+  font-size: var(--tam-xs);
+  background: var(--color-primario-suave);
+  color: var(--color-primario);
+  padding: 3px 8px;
+  border-radius: var(--radio-full);
+  font-weight: 600;
+}
+
+.lista-top-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.top-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  transition: border-color var(--transicion);
+}
+
+.top-item-row:hover {
+  border-color: var(--color-primario);
+}
+
+.top-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-ranking-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primario);
+  color: #FFFFFF;
+  font-size: var(--tam-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.top-ranking-1 {
+  background: #F59E0B;
+}
+
+.top-ranking-2 {
+  background: #94A3B8;
+}
+
+.top-ranking-3 {
+  background: #B45309;
+}
+
+.top-item-titulo {
+  font-size: var(--tam-sm);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.top-item-sub {
+  font-size: var(--tam-xs);
+  color: var(--color-texto-secundario);
+}
+
+.top-item-badge {
+  font-size: var(--tam-xs);
+  font-weight: 700;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  padding: 4px 10px;
+  border-radius: var(--radio-full);
+  color: var(--color-primario);
+}
+
+.distribucion-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.distribucion-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.distribucion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--tam-sm);
+}
+
+.distribucion-label {
+  color: var(--color-texto-principal);
+  font-weight: 500;
+}
+
+.distribucion-val {
+  font-weight: 700;
+  color: var(--color-texto-secundario);
+  font-size: var(--tam-xs);
+}
+
+.distribucion-barra-bg {
+  height: 8px;
+  background: var(--color-fondo-alt);
+  border-radius: var(--radio-full);
+  overflow: hidden;
+}
+
+.distribucion-barra-fill {
+  height: 100%;
+  background: var(--color-primario);
+  border-radius: var(--radio-full);
+  transition: width 400ms ease;
+}
+
+.distribucion-barra-hora {
+  background: var(--color-morado);
+}
+
+.distribucion-barra-cliente {
+  background: var(--color-cian);
+}
+
+.tabla-agentes-compacta {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: var(--tam-sm);
+}
+
+.tabla-agentes-compacta th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--color-borde);
+  color: var(--color-texto-secundario);
+  font-size: var(--tam-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tabla-agentes-compacta td {
+  padding: 10px;
+  border-bottom: 1px solid var(--color-borde);
+  color: var(--color-texto-principal);
+}
+
+.tabla-agentes-compacta tr:hover td {
+  background: var(--color-fondo);
+}

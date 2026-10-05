@@ -24,6 +24,7 @@ export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, o
       descripcion: inicial?.descripcion || '',
       prioridad: inicial?.prioridad || '',
       estado: inicial?.estado || 'abierta',
+      observacion: inicial?.observacion || '',
     },
     validar
   );
@@ -36,6 +37,7 @@ export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, o
       tipoIncidenciaId: parseInt(valores.tipoIncidenciaId, 10),
       servicioId: parseInt(valores.servicioId, 10),
       personalId: valores.personalId ? parseInt(valores.personalId, 10) : undefined,
+      observacion: valores.observacion ? valores.observacion.trim() : null,
     });
   };
 
@@ -92,6 +94,32 @@ export default function FormIncidencia({ inicial, tipos, servicios, onGuardar, o
           />
           {errores.descripcion && <p className="campo-error">{errores.descripcion}</p>}
         </div>
+        {inicial && (
+          <div className="campo-full">
+            <label htmlFor="form-inc-obs" className="campo-label">
+              Acción / Observación de seguimiento
+            </label>
+            <textarea
+              id="form-inc-obs"
+              name="observacion"
+              value={valores.observacion}
+              onChange={manejarCambio}
+              rows={3}
+              placeholder="Detalle de acciones tomadas o retroalimentación"
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: 'var(--radio-md)',
+                border: '1.5px solid var(--color-borde)',
+                background: 'var(--color-superficie)',
+                color: 'var(--color-texto-principal)',
+                fontSize: 'var(--tam-sm)',
+                resize: 'vertical',
+                fontFamily: 'var(--fuente-base)',
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="form-pie">
         <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
