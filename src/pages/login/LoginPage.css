@@ -47,7 +47,22 @@
 .login-subtitulo {
   font-size: var(--tam-sm);
   color: var(--color-texto-secundario);
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+}
+
+.login-alerta-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid var(--color-peligro);
+  border-radius: var(--radio-md);
+  color: var(--color-peligro);
+  font-size: var(--tam-sm);
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .login-formulario {

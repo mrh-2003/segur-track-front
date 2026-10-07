@@ -18,3 +18,8 @@ export const crearRequerimientoServicio = (servicioId, datos) => post(`/servicio
 export const eliminarRequerimientoServicio = (servicioId, reqId) => del(`/servicios/${servicioId}/requerimientos/${reqId}`);
 
 export const obtenerDetalleOperativo = (servicioId) => get(`/servicios/${servicioId}/detalle-operativo`);
+
+export const listarPersonalServicio = (servicioId) => get(`/servicios/${servicioId}/personal`);
+export const asignarPersonalServicio = (servicioId, personalId) => post(`/servicios/${servicioId}/personal`, { personalId });
+export const desasignarPersonalServicio = (servicioId, asignacionId) => del(`/servicios/${servicioId}/personal/${asignacionId}`);
+export const listarTodasAsignaciones = (params = {}) => get('/servicios/asignaciones/todas?' + new URLSearchParams(params));

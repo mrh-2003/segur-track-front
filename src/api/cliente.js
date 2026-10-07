@@ -17,8 +17,10 @@ async function solicitar(ruta, opciones = {}) {
 
   if (res.status === 401) {
     localStorage.removeItem('token');
-    window.location.href = '/login';
-    throw new ErrorApi('Sesión expirada', 401);
+    if (!ruta.startsWith('/auth/login') && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+      throw new ErrorApi('Sesión expirada', 401);
+    }
   }
 
   const datos = await res.json();

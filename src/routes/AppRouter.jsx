@@ -12,6 +12,8 @@ import MonitorMulticriterioPage from '../pages/monitor-multicriterio/MonitorMult
 import ReportesPage from '../pages/reportes/ReportesPage';
 import SedesPage from '../pages/sedes/SedesPage';
 import ClientesPage from '../pages/clientes/ClientesPage';
+import MonitorOperativoPage from '../pages/monitor-operativo/MonitorOperativoPage';
+import AnalisisHistoricoPage from '../pages/analisis-historico/AnalisisHistoricoPage';
 
 export function AppRouter() {
   return (
@@ -22,11 +24,12 @@ export function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/" element={<InicioPage />} />
+            <Route path="/servicios" element={<ServiciosPage />} />
             <Route path="/turnos" element={<TurnosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />
+            <Route path="/monitor-operativo" element={<MonitorOperativoPage />} />
 
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones', 'supervisor']} />}>
-              <Route path="/servicios" element={<ServiciosPage />} />
               <Route path="/sedes" element={<SedesPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
               <Route path="/dashboard-bi" element={<DashboardBIPage />} />
@@ -36,6 +39,7 @@ export function AppRouter() {
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones']} />}>
               <Route path="/personal" element={<PersonalPage />} />
               <Route path="/reportes" element={<ReportesPage />} />
+              <Route path="/analisis-historico" element={<AnalisisHistoricoPage />} />
             </Route>
           </Route>
         </Route>

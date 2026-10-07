@@ -1,0 +1,140 @@
+.hist-graficos-grilla {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .hist-graficos-grilla {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grafico-tarjeta {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  padding: 18px 20px;
+  box-shadow: var(--sombra-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grafico-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.grafico-titulo {
+  font-size: var(--tam-sm);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.grafico-ultimo-valor {
+  font-size: var(--tam-lg);
+  font-weight: 700;
+}
+
+.grafico-svg-contenedor {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.grafico-svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+
+.grafico-vacio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+  color: var(--color-texto-tenue);
+  font-size: var(--tam-xs);
+  text-align: center;
+}
+
+.hist-tarjeta-encabezado {
+  margin-bottom: 16px;
+}
+
+.hist-col-servicio {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hist-servicio-nombre {
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+.hist-servicio-sede {
+  font-size: var(--tam-xs);
+  color: var(--color-texto-secundario);
+}
+
+.hist-cliente-nombre {
+  font-size: var(--tam-sm);
+  color: var(--color-texto-principal);
+}
+
+.hist-cumplimiento-barra-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.hist-cumplimiento-texto {
+  font-size: var(--tam-xs);
+  font-weight: 700;
+}
+
+.hist-progreso-pista {
+  width: 100%;
+  height: 6px;
+  background: var(--color-fondo-panel);
+  border-radius: var(--radio-full);
+  overflow: hidden;
+}
+
+.hist-progreso-relleno {
+  height: 100%;
+  border-radius: var(--radio-full);
+  transition: width 0.3s ease;
+}
+
+.hist-incidencia-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radio-full);
+  background: var(--color-fondo-panel);
+  border: 1px solid var(--color-borde-suave);
+  color: var(--color-texto-secundario);
+  font-size: var(--tam-xs);
+  font-weight: 600;
+}
+
+.hist-incidencia-pill-alerta {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: var(--color-peligro);
+}
+
+.hist-evidencias-cant {
+  font-size: var(--tam-sm);
+  color: var(--color-texto-principal);
+  font-weight: 500;
+}

@@ -12,7 +12,10 @@ import {
   desasociarProtocoloServicio,
   crearRequerimientoServicio,
   eliminarRequerimientoServicio,
+  asignarPersonalServicio,
+  desasignarPersonalServicio,
 } from '../../api/servicios';
+import { listarPersonal } from '../../api/personal';
 import { listarProtocolos, crearProtocolo } from '../../api/protocolos';
 import { crearEvidencia, revisarEvidencia } from '../../api/evidencias';
 import { formatearFecha } from '../../utils/fechas';
@@ -23,6 +26,10 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const [pestana, setPestana] = useState('resumen');
   const [datos, setDatos] = useState(null);
   const [todosProtocolos, setTodosProtocolos] = useState([]);
+  const [todosPersonal, setTodosPersonal] = useState([]);
+  const [mostrarAsignarPersonal, setMostrarAsignarPersonal] = useState(false);
+  const [personalAAsignarId, setPersonalAAsignarId] = useState('');
+  const [filtroPersonal, setFiltroPersonal] = useState('');
   const [cargando, setCargando] = useState(true);
   const { cargando: cargandoAccion, ejecutar } = useAsync();
 
@@ -53,12 +60,14 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
 
   const cargar = useCallback(async () => {
     try {
-      const [detalle, listaProts] = await Promise.all([
+      const [detalle, listaProts, listaPersonal] = await Promise.all([
         obtenerDetalleOperativo(servicioId),
         listarProtocolos(),
+        listarPersonal({ estado: 'activo' }),
       ]);
       setDatos(detalle);
       setTodosProtocolos(listaProts);
+      setTodosPersonal(listaPersonal);
     } catch (err) {
       informar('Error', err.message, 'error');
     } finally {
@@ -77,6 +86,37 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
       activo = false;
     };
   }, [cargar]);
+
+  const handleAsignarPersonal = async (e) => {
+    e.preventDefault();
+    if (!personalAAsignarId) {
+      informar('Seleccione personal', 'Debe seleccionar un personal operativo para asignar', 'advertencia');
+      return;
+    }
+    await ejecutar(async () => {
+      try {
+        await asignarPersonalServicio(servicioId, Number(personalAAsignarId));
+        informar('Personal asignado', 'El personal fue asignado exitosamente al servicio', 'exito');
+        setPersonalAAsignarId('');
+        setMostrarAsignarPersonal(false);
+        await cargar();
+      } catch (err) {
+        informar('Error de asignación', err.message, 'error');
+      }
+    });
+  };
+
+  const handleDesasignarPersonal = async (asignacionId, nombrePersonal) => {
+    await ejecutar(async () => {
+      try {
+        await desasignarPersonalServicio(servicioId, asignacionId);
+        informar('Asignación retirada', `Se retiró a ${nombrePersonal} del servicio`, 'exito');
+        await cargar();
+      } catch (err) {
+        informar('Error', err.message, 'error');
+      }
+    });
+  };
 
   const handleCrearRequerimiento = async (e) => {
     e.preventDefault();
@@ -239,6 +279,17 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
     (tp) => !protocolos.some((p) => p.id === tp.id)
   );
 
+  const personalAsignadoFiltrado = personalAsignado.filter((p) => {
+    if (!filtroPersonal.trim()) return true;
+    const term = filtroPersonal.toLowerCase();
+    return (
+      p.nombres?.toLowerCase().includes(term) ||
+      p.apellidos?.toLowerCase().includes(term) ||
+      p.documento?.includes(term) ||
+      p.cargo?.toLowerCase().includes(term)
+    );
+  });
+
   return (
     <div className="detalle-operativo-modal">
       <div className="detalle-operativo-cabecera">
@@ -306,18 +357,89 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
               </div>
             </div>
 
-            <h4 className="seccion-subtitulo">Personal Operativo Asignado</h4>
-            {personalAsignado.length === 0 ? (
-              <p className="vacio-mensaje">No hay personal operativo asignado actualmente a este servicio.</p>
+            <div className="panel-acciones-seccion" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12 }}>
+              <h4 className="seccion-subtitulo" style={{ margin: 0 }}>Personal Operativo Asignado ({personalAsignado.length})</h4>
+              {esSupervisorOAdmin && (
+                <Button
+                  variante="primario"
+                  tamano="sm"
+                  onClick={() => setMostrarAsignarPersonal(!mostrarAsignarPersonal)}
+                >
+                  {mostrarAsignarPersonal ? 'Cerrar asignación' : '+ Asignar personal'}
+                </Button>
+              )}
+            </div>
+
+            {mostrarAsignarPersonal && (
+              <form onSubmit={handleAsignarPersonal} className="formulario-subpanel" style={{ marginBottom: 16 }}>
+                <Select
+                  id="select-personal-asignar"
+                  label="Seleccionar personal operativo"
+                  nombre="personalId"
+                  valor={personalAAsignarId}
+                  onChange={(e) => setPersonalAAsignarId(e.target.value)}
+                  requerido
+                >
+                  <option value="">-- Seleccionar personal activo --</option>
+                  {todosPersonal
+                    .filter((pers) => !personalAsignado.some((pa) => pa.id === pers.id))
+                    .map((pers) => (
+                      <option key={pers.id} value={pers.id}>
+                        {pers.nombres} {pers.apellidos} ({pers.cargo}) - DNI: {pers.documento}
+                      </option>
+                    ))}
+                </Select>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsignarPersonal(false)}>
+                    Cancelar
+                  </Button>
+                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion} disabled={!personalAAsignarId}>
+                    Confirmar asignación
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {personalAsignado.length > 2 && (
+              <div style={{ marginBottom: 12 }}>
+                <Input
+                  id="filtro-personal-asignado"
+                  nombre="filtroPersonal"
+                  valor={filtroPersonal}
+                  onChange={(e) => setFiltroPersonal(e.target.value)}
+                  placeholder="Filtrar personal por nombre, cargo o DNI..."
+                />
+              </div>
+            )}
+
+            {personalAsignadoFiltrado.length === 0 ? (
+              <p className="vacio-mensaje">
+                {personalAsignado.length === 0
+                  ? 'No hay personal operativo asignado actualmente a este servicio.'
+                  : 'No se encontraron asignaciones coincidentes con el filtro aplicado.'}
+              </p>
             ) : (
               <div className="lista-cards-personal">
-                {personalAsignado.map((p) => (
-                  <div key={p.id} className="tarjeta-persona-asignada">
+                {personalAsignadoFiltrado.map((p) => (
+                  <div key={p.id} className="tarjeta-persona-asignada" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <strong>{p.nombres} {p.apellidos}</strong>
                       <span className="persona-doc">DNI: {p.documento} • {p.cargo}</span>
                     </div>
-                    <Badge valor={p.estado} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Badge valor={p.estado} />
+                      {esSupervisorOAdmin && (
+                        <button
+                          type="button"
+                          className="btn-link-peligro"
+                          style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 'var(--tam-xs)', fontWeight: 600 }}
+                          onClick={() => handleDesasignarPersonal(p.asignacion_id, `${p.nombres} ${p.apellidos}`)}
+                          title="Retirar asignación"
+                        >
+                          Retirar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

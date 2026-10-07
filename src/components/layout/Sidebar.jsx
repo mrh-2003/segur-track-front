@@ -6,12 +6,14 @@ const MENU = [
   { ruta: '/', etiqueta: 'Inicio', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
   { ruta: '/personal', etiqueta: 'Personal', roles: ['administrador', 'jefe_operaciones'] },
   { ruta: '/turnos', etiqueta: 'Turnos', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
-  { ruta: '/servicios', etiqueta: 'Servicios', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/servicios', etiqueta: 'Servicios', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
   { ruta: '/sedes', etiqueta: 'Sedes', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
   { ruta: '/clientes', etiqueta: 'Clientes', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
   { ruta: '/incidencias', etiqueta: 'Incidencias', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
+  { ruta: '/monitor-operativo', etiqueta: 'Monitor Operativo', roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'] },
   { ruta: '/dashboard-bi', etiqueta: 'Dashboard BI', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
   { ruta: '/monitor-multicriterio', etiqueta: 'Monitor multicriterio', roles: ['administrador', 'jefe_operaciones', 'supervisor'] },
+  { ruta: '/analisis-historico', etiqueta: 'Análisis histórico', roles: ['administrador', 'jefe_operaciones'] },
   { ruta: '/reportes', etiqueta: 'Reportes', roles: ['administrador', 'jefe_operaciones'] },
 ];
 

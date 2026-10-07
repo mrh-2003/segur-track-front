@@ -31,7 +31,7 @@ export function Topbar({ onToggleSidebar }) {
         try {
           await logout();
         } catch {
-          // Si falla la red, cerramos de todos modos localmente
+          void 0;
         }
         cerrarSesion();
         navigate('/login');

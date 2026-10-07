@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useModal } from '../../hooks/useModal';
@@ -24,11 +25,17 @@ export default function LoginPage() {
   const { abrirModal, cerrarModal, informar } = useModal();
   const navigate = useNavigate();
   const { cargando, ejecutar } = useAsync();
+  const [errorMensaje, setErrorMensaje] = useState(null);
 
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     { correo: '', clave: '' },
     validar
   );
+
+  const manejarCambioInput = (e) => {
+    if (errorMensaje) setErrorMensaje(null);
+    manejarCambio(e);
+  };
 
   const abrirOlvideClave = (e) => {
     e.preventDefault();
@@ -47,6 +54,7 @@ export default function LoginPage() {
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
+    setErrorMensaje(null);
     if (!validarTodo()) return;
 
     await ejecutar(async () => {
@@ -83,7 +91,9 @@ export default function LoginPage() {
         iniciarSesion(resultado.token, resultado.usuario);
         navigate('/');
       } catch (err) {
-        informar('Error de acceso', err.message || 'Credenciales incorrectas', 'error');
+        const msg = err.message || 'Credenciales incorrectas';
+        setErrorMensaje(msg);
+        informar('Error de acceso', msg, 'error');
       }
     });
   };
@@ -97,6 +107,13 @@ export default function LoginPage() {
         </div>
         <p className="login-subtitulo">Sistema de monitoreo operativo de seguridad</p>
 
+        {errorMensaje && (
+          <div className="login-alerta-error" role="alert">
+            <Icono nombre="alerta" tamano={18} color="var(--color-peligro)" />
+            <span>{errorMensaje}</span>
+          </div>
+        )}
+
         <form onSubmit={manejarSubmit} noValidate className="login-formulario">
           <Input
             id="correo-login"
@@ -104,7 +121,7 @@ export default function LoginPage() {
             nombre="correo"
             tipo="email"
             valor={valores.correo}
-            onChange={manejarCambio}
+            onChange={manejarCambioInput}
             onBlur={manejarBlur}
             error={errores.correo}
             placeholder="usuario@segurtrack.com"
@@ -117,7 +134,7 @@ export default function LoginPage() {
             nombre="clave"
             tipo="password"
             valor={valores.clave}
-            onChange={manejarCambio}
+            onChange={manejarCambioInput}
             onBlur={manejarBlur}
             error={errores.clave}
             placeholder="••••••••"

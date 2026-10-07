@@ -45,6 +45,14 @@ export function Icono({ nombre, tamano = 16, color = 'currentColor', className =
           <circle cx="12" cy="12" r="3" />
         </svg>
       );
+    case 'refrescar':
+    case 'actualizar':
+      return (
+        <svg {...props}>
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+        </svg>
+      );
     case 'check':
     case 'confirmar':
       return (

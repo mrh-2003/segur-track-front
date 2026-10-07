@@ -208,7 +208,32 @@ export default function MonitorMulticriterioPage() {
         />
       </div>
 
-      <div className="grilla-contenido grilla-1-1">
+      <div className="tarjeta" style={{ marginTop: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+          <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Resultados por servicio</h3>
+          <div style={{ width: 240 }}>
+            <Select
+              id="filtro-nivel-atencion"
+              nombre="filtroNivel"
+              valor={filtroNivel}
+              onChange={(e) => setFiltroNivel(e.target.value)}
+              placeholder="Todos los niveles de atención"
+            >
+              <option value="alta">Alta atención</option>
+              <option value="media">Media atención</option>
+              <option value="baja">Baja atención</option>
+            </Select>
+          </div>
+        </div>
+        <Table
+          columnas={columnas}
+          datos={tablaFiltrada}
+          cargando={cargando}
+          vacio={filtroNivel ? 'No existen servicios en el nivel de atención seleccionado.' : 'Sin evaluaciones. Use el botón Evaluar para comenzar.'}
+        />
+      </div>
+
+      <div className="grilla-contenido grilla-1-1" style={{ marginTop: 20 }}>
         <div className="tarjeta">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Criterios de evaluación</h3>
@@ -375,31 +400,6 @@ export default function MonitorMulticriterioPage() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="tarjeta" style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-          <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Resultados por servicio</h3>
-          <div style={{ width: 240 }}>
-            <Select
-              id="filtro-nivel-atencion"
-              nombre="filtroNivel"
-              valor={filtroNivel}
-              onChange={(e) => setFiltroNivel(e.target.value)}
-              placeholder="Todos los niveles de atención"
-            >
-              <option value="alta">Alta atención</option>
-              <option value="media">Media atención</option>
-              <option value="baja">Baja atención</option>
-            </Select>
-          </div>
-        </div>
-        <Table
-          columnas={columnas}
-          datos={tablaFiltrada}
-          cargando={cargando}
-          vacio={filtroNivel ? 'No existen servicios en el nivel de atención seleccionado.' : 'Sin evaluaciones. Use el botón Evaluar para comenzar.'}
-        />
       </div>
     </div>
   );
