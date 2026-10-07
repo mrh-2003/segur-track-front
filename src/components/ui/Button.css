@@ -1,6 +1,7 @@
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: none;
   border-radius: var(--radio-md);
@@ -10,14 +11,43 @@
   transition: background var(--transicion), opacity var(--transicion), transform 100ms;
   white-space: nowrap;
   user-select: none;
+  vertical-align: middle;
 }
 
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn:not(:disabled):active { transform: translateY(1px); }
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
 
 .btn-sm  { padding: 6px 12px; font-size: var(--tam-xs); }
 .btn-md  { padding: 9px 18px; font-size: var(--tam-sm); }
 .btn-lg  { padding: 12px 24px; font-size: var(--tam-md); }
+
+.btn-contenido {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.btn-texto-cargando {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn svg,
+.btn .icono-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
 
 .btn-primario {
   background: var(--color-primario);
@@ -38,6 +68,12 @@
 }
 .btn-peligro:not(:disabled):hover { background: #b91c1c; }
 
+.btn-exito {
+  background: var(--color-exito);
+  color: #fff;
+}
+.btn-exito:not(:disabled):hover { background: #15803d; }
+
 .btn-fantasma {
   background: transparent;
   color: var(--color-primario);
@@ -54,7 +90,7 @@
   flex-shrink: 0;
 }
 
-.btn-primario.btn-secundario .btn-spinner,
+.btn-secundario .btn-spinner,
 .btn-fantasma .btn-spinner {
   border-color: rgba(37,99,235,0.3);
   border-top-color: var(--color-primario);

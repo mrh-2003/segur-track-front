@@ -55,6 +55,12 @@ h4 { font-size: var(--tam-lg);  font-weight: 600; }
 ::-webkit-scrollbar-thumb { background: var(--color-borde); border-radius: var(--radio-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-texto-tenue); }
 
+.icono-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .layout-principal {
   display: flex;
   min-height: 100vh;

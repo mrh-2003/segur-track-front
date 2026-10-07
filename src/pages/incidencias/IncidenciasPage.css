@@ -1,3 +1,21 @@
-.accion-btn { background: none; border: 1px solid var(--color-borde); border-radius: var(--radio-sm); padding: 4px 8px; cursor: pointer; font-size: var(--tam-sm); transition: background var(--transicion); }
-.accion-btn:hover { background: var(--color-fondo-alt); }
-.accion-btn-peligro:hover { background: var(--color-peligro-suave); border-color: var(--color-peligro); }
+.accion-btn {
+  background: none;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--tam-sm);
+  transition: background var(--transicion);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.accion-btn:hover {
+  background: var(--color-fondo-alt);
+}
+
+.accion-btn-peligro:hover {
+  background: var(--color-peligro-suave);
+  border-color: var(--color-peligro);
+}

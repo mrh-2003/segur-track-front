@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAsync } from '../../hooks/useAsync';
 import { Badge } from '../../components/ui/Badge';
@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Spinner } from '../../components/ui/Spinner';
+import { Icono } from '../../components/ui/Icono';
 import {
   obtenerDetalleOperativo,
   asociarProtocolosServicio,
@@ -18,8 +19,16 @@ import {
 import { listarPersonal } from '../../api/personal';
 import { listarProtocolos, crearProtocolo } from '../../api/protocolos';
 import { crearEvidencia, revisarEvidencia } from '../../api/evidencias';
+import { subirMultiplesFotosImageKit } from '../../utils/imagekit';
 import { formatearFecha } from '../../utils/fechas';
 import './ModalDetalleOperativo.css';
+
+function formatearTamano(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }) {
   const { usuario } = useAuth();
@@ -49,8 +58,13 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const [mostrarFormEvidencia, setMostrarFormEvidencia] = useState(false);
   const [evTitulo, setEvTitulo] = useState('');
   const [evProtId, setEvProtId] = useState('');
+  const [evPersonalId, setEvPersonalId] = useState('');
   const [evDesc, setEvDesc] = useState('');
-  const [evUrl, setEvUrl] = useState('');
+  const [archivosEvidencia, setArchivosEvidencia] = useState([]);
+  const [arrastrandoEvidencia, setArrastrandoEvidencia] = useState(false);
+  const [errorCargaEvidencia, setErrorCargaEvidencia] = useState('');
+  const [fotoModal, setFotoModal] = useState(null);
+  const inputEvidenciaRef = useRef(null);
 
   const [evidenciaARevisar, setEvidenciaARevisar] = useState(null);
   const [revEstado, setRevEstado] = useState('aprobada');
@@ -86,6 +100,43 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
       activo = false;
     };
   }, [cargar]);
+
+  useEffect(() => {
+    if (datos) {
+      if (usuario?.personalId) {
+        setEvPersonalId(String(usuario.personalId));
+      } else if (datos.servicio?.supervisor_id) {
+        setEvPersonalId(String(datos.servicio.supervisor_id));
+      } else if (datos.personalAsignado?.length > 0) {
+        setEvPersonalId(String(datos.personalAsignado[0].id));
+      }
+    }
+  }, [datos, usuario]);
+
+  const agregarArchivosEvidencia = (files) => {
+    setErrorCargaEvidencia('');
+    const validos = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (validos.length === 0) {
+      setErrorCargaEvidencia('Solo se permiten archivos de imagen (JPG, PNG, WEBP, etc.)');
+      return;
+    }
+    const nuevos = validos.map((file) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      file,
+      nombre: file.name,
+      tamano: file.size,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setArchivosEvidencia((prev) => [...prev, ...nuevos]);
+  };
+
+  const eliminarArchivoEvidencia = (id) => {
+    setArchivosEvidencia((prev) => {
+      const item = prev.find((x) => x.id === id);
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return prev.filter((x) => x.id !== id);
+    });
+  };
 
   const handleAsignarPersonal = async (e) => {
     e.preventDefault();
@@ -219,22 +270,66 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
       informar('Dato requerido', 'El título de la evidencia es obligatorio', 'advertencia');
       return;
     }
+    if (archivosEvidencia.length === 0) {
+      setErrorCargaEvidencia('Debe seleccionar o arrastrar al menos una imagen de evidencia');
+      return;
+    }
+
+    const personalElegido = evPersonalId
+      ? parseInt(evPersonalId, 10)
+      : (usuario?.personalId || datos?.servicio?.supervisor_id || (datos?.personalAsignado[0]?.id ?? null));
+
+    if (!personalElegido) {
+      informar('Personal requerido', 'Debe seleccionar el personal operativo responsable de la evidencia', 'advertencia');
+      return;
+    }
+
     await ejecutar(async () => {
       try {
-        await crearEvidencia({
-          servicioId,
-          protocoloId: evProtId ? parseInt(evProtId, 10) : null,
-          titulo: evTitulo.trim(),
-          descripcion: evDesc.trim(),
-          archivoUrl: evUrl.trim() || null,
+        const archivos = archivosEvidencia.map((x) => x.file);
+        let urlsSubidas = [];
+        try {
+          urlsSubidas = await subirMultiplesFotosImageKit(archivos);
+        } catch {
+          urlsSubidas = await Promise.all(
+            archivos.map(
+              (file) =>
+                new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => resolve(ev.target.result);
+                  reader.readAsDataURL(file);
+                })
+            )
+          );
+        }
+
+        for (let i = 0; i < urlsSubidas.length; i++) {
+          const url = urlsSubidas[i];
+          const tituloFinal =
+            urlsSubidas.length > 1
+              ? `${evTitulo.trim()} (${i + 1}/${urlsSubidas.length})`
+              : evTitulo.trim();
+
+          await crearEvidencia({
+            servicioId,
+            protocoloId: evProtId ? parseInt(evProtId, 10) : null,
+            personalId: personalElegido,
+            titulo: tituloFinal,
+            descripcion: evDesc.trim() || null,
+            archivoUrl: url,
+          });
+        }
+
+        archivosEvidencia.forEach((a) => {
+          if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
         });
+        setArchivosEvidencia([]);
         setMostrarFormEvidencia(false);
         setEvTitulo('');
         setEvProtId('');
         setEvDesc('');
-        setEvUrl('');
         await cargar();
-        informar('Éxito', 'Evidencia registrada correctamente', 'exito');
+        informar('Éxito', `${urlsSubidas.length} evidencia(s) registrada(s) correctamente`, 'exito');
       } catch (err) {
         informar('Error', err.message, 'error');
       }
@@ -306,30 +401,35 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         <button
           className={`pestana-btn ${pestana === 'resumen' ? 'activa' : ''}`}
           onClick={() => setPestana('resumen')}
+          type="button"
         >
           Resumen y Personal ({personalAsignado.length})
         </button>
         <button
           className={`pestana-btn ${pestana === 'requerimientos' ? 'activa' : ''}`}
           onClick={() => setPestana('requerimientos')}
+          type="button"
         >
           Requerimientos ({requerimientos.length})
         </button>
         <button
           className={`pestana-btn ${pestana === 'protocolos' ? 'activa' : ''}`}
           onClick={() => setPestana('protocolos')}
+          type="button"
         >
           Protocolos ({protocolos.length})
         </button>
         <button
           className={`pestana-btn ${pestana === 'evidencias' ? 'activa' : ''}`}
           onClick={() => setPestana('evidencias')}
+          type="button"
         >
           Evidencias ({evidencias.length})
         </button>
         <button
           className={`pestana-btn ${pestana === 'incidencias' ? 'activa' : ''}`}
           onClick={() => setPestana('incidencias')}
+          type="button"
         >
           Incidencias ({incidencias.length})
         </button>
@@ -390,7 +490,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                     ))}
                 </Select>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsignarPersonal(false)}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsignarPersonal(false)} disabled={cargandoAccion}>
                     Cancelar
                   </Button>
                   <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion} disabled={!personalAAsignarId}>
@@ -435,6 +535,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                           style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 'var(--tam-xs)', fontWeight: 600 }}
                           onClick={() => handleDesasignarPersonal(p.asignacion_id, `${p.nombres} ${p.apellidos}`)}
                           title="Retirar asignación"
+                          disabled={cargandoAccion}
                         >
                           Retirar
                         </button>
@@ -493,7 +594,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   <option value="baja">Baja</option>
                 </Select>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormReq(false)}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormReq(false)} disabled={cargandoAccion}>
                     Cancelar
                   </Button>
                   <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
@@ -520,6 +621,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                           type="button"
                           className="btn-link-peligro"
                           onClick={() => handleEliminarRequerimiento(r.id)}
+                          disabled={cargandoAccion}
                         >
                           Eliminar requerimiento
                         </button>
@@ -580,7 +682,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   ))}
                 </Select>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsociarProt(false)}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsociarProt(false)} disabled={cargandoAccion}>
                     Cancelar
                   </Button>
                   <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
@@ -628,7 +730,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   requerido
                 />
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarCrearProt(false)}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarCrearProt(false)} disabled={cargandoAccion}>
                     Cancelar
                   </Button>
                   <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
@@ -654,6 +756,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                           type="button"
                           className="btn-link-peligro"
                           onClick={() => handleDesasociarProtocolo(p.id)}
+                          disabled={cargandoAccion}
                         >
                           Retirar protocolo
                         </button>
@@ -711,6 +814,28 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   requerido
                 />
                 <Select
+                  id="ev-personal"
+                  label="Personal operativo responsable *"
+                  nombre="evPersonalId"
+                  valor={evPersonalId}
+                  onChange={(e) => setEvPersonalId(e.target.value)}
+                  requerido
+                >
+                  <option value="">-- Seleccionar personal responsable --</option>
+                  {personalAsignado.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombres} {p.apellidos} ({p.cargo}) [Asignado]
+                    </option>
+                  ))}
+                  {todosPersonal
+                    .filter((p) => !personalAsignado.some((pa) => pa.id === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombres} {p.apellidos} ({p.cargo})
+                      </option>
+                    ))}
+                </Select>
+                <Select
                   id="ev-prot"
                   label="Protocolo asociado"
                   nombre="evProtId"
@@ -732,56 +857,80 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   onChange={(e) => setEvDesc(e.target.value)}
                   placeholder="Detalle de la labor realizada"
                 />
-                <Input
-                  id="ev-url"
-                  label="Enlace a archivo o fotografía (URL)"
-                  nombre="evUrl"
-                  valor={evUrl}
-                  onChange={(e) => setEvUrl(e.target.value)}
-                  placeholder="https://..."
-                />
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormEvidencia(false)}>
-                    Cancelar
-                  </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
-                    Guardar evidencia
-                  </Button>
-                </div>
-              </form>
-            )}
 
-            {evidenciaARevisar && (
-              <form onSubmit={handleGuardarRevision} className="formulario-subpanel panel-revision">
-                <h5 style={{ margin: '0 0 8px 0', fontSize: 'var(--tam-sm)' }}>
-                  Revisión de evidencia: <strong>{evidenciaARevisar.titulo}</strong>
-                </h5>
-                <Select
-                  id="rev-estado"
-                  label="Estado de revisión"
-                  nombre="revEstado"
-                  valor={revEstado}
-                  onChange={(e) => setRevEstado(e.target.value)}
-                  requerido
-                >
-                  <option value="aprobada">Aprobada</option>
-                  <option value="observada">Observada</option>
-                  <option value="pendiente">Pendiente</option>
-                </Select>
-                <Input
-                  id="rev-obs"
-                  label="Observación o retroalimentación"
-                  nombre="revObservacion"
-                  valor={revObservacion}
-                  onChange={(e) => setRevObservacion(e.target.value)}
-                  placeholder="Comentario para el personal operativo"
-                />
+                <div className="evidencia-subida-contenedor">
+                  <label className="campo-etiqueta">
+                    Cargar fotografías de evidencia *
+                  </label>
+                  <div
+                    className={`evidencias-dropzone ${arrastrandoEvidencia ? 'dropzone-activa' : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setArrastrandoEvidencia(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setArrastrandoEvidencia(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setArrastrandoEvidencia(false);
+                      if (e.dataTransfer?.files?.length > 0) agregarArchivosEvidencia(e.dataTransfer.files);
+                    }}
+                    onClick={() => inputEvidenciaRef.current?.click()}
+                  >
+                    <input
+                      ref={inputEvidenciaRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target?.files?.length > 0) agregarArchivosEvidencia(e.target.files);
+                      }}
+                    />
+                    <div className="dropzone-icono">
+                      <Icono nombre="subir" tamano={28} />
+                    </div>
+                    <p className="dropzone-texto-principal">
+                      Arrastra y suelta imágenes aquí, o <span className="dropzone-texto-enlace">haz clic para explorar</span>
+                    </p>
+                    <span className="dropzone-texto-secundario">
+                      Formatos soportados: JPG, PNG, WEBP (puede seleccionar una o varias imágenes)
+                    </span>
+                  </div>
+
+                  {errorCargaEvidencia && (
+                    <div className="evidencias-error-alerta">
+                      <Icono nombre="alerta" tamano={14} />
+                      <span>{errorCargaEvidencia}</span>
+                    </div>
+                  )}
+
+                  {archivosEvidencia.length > 0 && (
+                    <div className="archivos-previews-grilla">
+                      {archivosEvidencia.map((item) => (
+                        <div key={item.id} className="archivo-preview-item">
+                          <img src={item.previewUrl} alt={item.nombre} className="archivo-preview-miniatura" />
+                          <div className="archivo-preview-info">
+                            <span className="archivo-preview-nombre" title={item.nombre}>{item.nombre}</span>
+                            <span className="archivo-preview-tamano">{formatearTamano(item.tamano)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="archivo-preview-btn-eliminar"
+                            onClick={() => eliminarArchivoEvidencia(item.id)}
+                            disabled={cargandoAccion}
+                            title="Quitar imagen"
+                          >
+                            <Icono nombre="cerrar" tamano={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setEvidenciaARevisar(null)}>
+                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormEvidencia(false)} disabled={cargandoAccion}>
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
-                    Confirmar revisión
+                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion} disabled={archivosEvidencia.length === 0}>
+                    Guardar evidencia
                   </Button>
                 </div>
               </form>
@@ -806,10 +955,12 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                     </div>
                     {ev.descripcion && <p className="ev-desc">{ev.descripcion}</p>}
                     {ev.archivo_url && (
-                      <div className="ev-enlace-caja">
-                        <a href={ev.archivo_url} target="_blank" rel="noreferrer" className="ev-link">
-                          Ver archivo / evidencia adjunta ↗
-                        </a>
+                      <div className="ev-galeria-item" onClick={() => setFotoModal(ev.archivo_url)} title="Clic para ver foto ampliada">
+                        <img src={ev.archivo_url} alt={ev.titulo} className="ev-miniatura-img" />
+                        <div className="ev-miniatura-overlay">
+                          <Icono nombre="zoom" tamano={18} color="#fff" />
+                          <span>Ver foto</span>
+                        </div>
                       </div>
                     )}
                     <div className="ev-pie">
@@ -820,6 +971,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                         <button
                           type="button"
                           className="btn-link-accion"
+                          disabled={cargandoAccion}
                           onClick={() => {
                             setEvidenciaARevisar(ev);
                             setRevEstado(ev.estado_revision);
@@ -879,6 +1031,128 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
           Cerrar
         </Button>
       </div>
+
+      {evidenciaARevisar && (
+        <div className="modal-overlay modal-revision-overlay" onClick={() => setEvidenciaARevisar(null)}>
+          <div
+            className="modal-contenedor modal-formulario"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-rev-titulo"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-encabezado">
+              <h3 id="modal-rev-titulo" className="modal-titulo">Revisar evidencia</h3>
+              <button
+                type="button"
+                className="modal-cerrar"
+                onClick={() => setEvidenciaARevisar(null)}
+                aria-label="Cerrar"
+                disabled={cargandoAccion}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleGuardarRevision} className="modal-cuerpo" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <p style={{ margin: '0 0 4px 0', fontSize: 'var(--tam-base)', fontWeight: 700, color: 'var(--color-texto-principal)' }}>
+                  {evidenciaARevisar.titulo}
+                </p>
+                <span style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-secundario)' }}>
+                  Registrado por {evidenciaARevisar.personal} • {evidenciaARevisar.fecha_registro}
+                </span>
+              </div>
+
+              {evidenciaARevisar.protocolo && (
+                <div>
+                  <span className="ev-protocolo-chip" style={{ margin: 0 }}>
+                    {evidenciaARevisar.protocolo_codigo ? `[${evidenciaARevisar.protocolo_codigo}] ` : ''}
+                    {evidenciaARevisar.protocolo}
+                  </span>
+                </div>
+              )}
+
+              {evidenciaARevisar.archivo_url && (
+                <div className="ev-revision-foto-caja">
+                  <img
+                    src={evidenciaARevisar.archivo_url}
+                    alt={evidenciaARevisar.titulo}
+                    className="ev-revision-foto-img"
+                  />
+                </div>
+              )}
+
+              {evidenciaARevisar.descripcion && (
+                <p style={{ margin: 0, fontSize: 'var(--tam-sm)', color: 'var(--color-texto-secundario)', lineHeight: 1.4 }}>
+                  {evidenciaARevisar.descripcion}
+                </p>
+              )}
+
+              <Select
+                id="rev-estado-modal"
+                label="Estado de revisión *"
+                nombre="revEstado"
+                valor={revEstado}
+                onChange={(e) => setRevEstado(e.target.value)}
+                requerido
+              >
+                <option value="aprobada">Aprobada</option>
+                <option value="observada">Observada</option>
+                <option value="pendiente">Pendiente</option>
+              </Select>
+
+              <div className="campo">
+                <label className="campo-etiqueta" htmlFor="rev-obs-modal">
+                  Observación o retroalimentación
+                </label>
+                <textarea
+                  id="rev-obs-modal"
+                  className="campo-input"
+                  rows={3}
+                  value={revObservacion}
+                  onChange={(e) => setRevObservacion(e.target.value)}
+                  placeholder="Comentario o directiva para el personal operativo..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+                <Button
+                  type="button"
+                  variante="secundario"
+                  onClick={() => setEvidenciaARevisar(null)}
+                  disabled={cargandoAccion}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variante="primario"
+                  cargando={cargandoAccion}
+                >
+                  Confirmar revisión
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {fotoModal && (
+        <div className="evidencia-lightbox-overlay" onClick={() => setFotoModal(null)}>
+          <div className="evidencia-lightbox-contenido" onClick={(e) => e.stopPropagation()}>
+            <img src={fotoModal} alt="Evidencia en pantalla completa" className="evidencia-lightbox-img" />
+            <button
+              type="button"
+              className="evidencia-lightbox-cerrar"
+              onClick={() => setFotoModal(null)}
+              aria-label="Cerrar foto"
+            >
+              <Icono nombre="cerrar" tamano={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

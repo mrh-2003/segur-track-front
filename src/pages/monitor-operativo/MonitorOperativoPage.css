@@ -140,10 +140,17 @@
   color: var(--color-texto-tenue);
   padding: 6px;
   border-radius: var(--radio-sm);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transicion-rapida);
+}
+
+.monitor-inspector-cerrar svg,
+.monitor-inspector-cerrar .icono-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .monitor-inspector-cerrar:hover {
@@ -161,6 +168,7 @@
 .monitor-pestana-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 10px 14px;
   background: transparent;
@@ -171,6 +179,14 @@
   color: var(--color-texto-secundario);
   white-space: nowrap;
   transition: all var(--transicion-rapida);
+  line-height: 1;
+}
+
+.monitor-pestana-btn svg,
+.monitor-pestana-btn .icono-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .monitor-pestana-btn:hover {

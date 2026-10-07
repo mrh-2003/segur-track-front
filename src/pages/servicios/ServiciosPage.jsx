@@ -82,6 +82,8 @@ export default function ServiciosPage() {
     abrirModal({
       tipo: 'formulario',
       titulo: `Detalle operativo: ${item.nombre}`,
+      tamano: 'xl',
+      sinScrollExterno: true,
       contenido: (
         <ModalDetalleOperativo
           servicioId={item.id}

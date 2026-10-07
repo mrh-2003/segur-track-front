@@ -1,29 +1,65 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from './Button';
 import './Modal.css';
 
 export function Modal({ modal, onCerrar }) {
   const dialogRef = useRef(null);
+  const [accionEnCurso, setAccionEnCurso] = useState(false);
 
   useEffect(() => {
     if (!modal) return;
+    setAccionEnCurso(false);
     const el = dialogRef.current;
     if (!el) return;
     el.focus();
 
     const manejarEscape = (e) => {
-      if (e.key === 'Escape' && modal.tipo !== 'formulario') onCerrar();
+      if (e.key === 'Escape' && modal.tipo !== 'formulario' && !accionEnCurso && !modal.cargando) {
+        onCerrar();
+      }
     };
     document.addEventListener('keydown', manejarEscape);
     return () => document.removeEventListener('keydown', manejarEscape);
-  }, [modal, onCerrar]);
+  }, [modal, onCerrar, accionEnCurso]);
 
   if (!modal) return null;
 
+  const estaBloqueado = modal.cargando || accionEnCurso;
+
+  const manejarConfirmar = async () => {
+    if (estaBloqueado) return;
+    setAccionEnCurso(true);
+    try {
+      if (modal.onConfirmar) {
+        await modal.onConfirmar();
+      }
+      onCerrar();
+    } catch {
+      setAccionEnCurso(false);
+    }
+  };
+
+  const clasesContenedor = [
+    'modal-contenedor',
+    `modal-${modal.tipo}`,
+    modal.tamano ? `modal-${modal.tamano}` : '',
+    modal.sinScrollExterno ? 'modal-sin-scroll-externo' : '',
+    modal.claseExtra || '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget && modal.tipo !== 'formulario') onCerrar(); }}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && modal.tipo !== 'formulario' && !estaBloqueado) {
+          onCerrar();
+        }
+      }}
+    >
       <div
-        className={`modal-contenedor modal-${modal.tipo}`}
+        className={clasesContenedor}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-titulo"
@@ -33,7 +69,14 @@ export function Modal({ modal, onCerrar }) {
         <div className="modal-encabezado">
           <h2 id="modal-titulo" className="modal-titulo">{modal.titulo}</h2>
           {modal.tipo !== 'confirmacion' && (
-            <button className="modal-cerrar" onClick={onCerrar} aria-label="Cerrar">✕</button>
+            <button
+              className="modal-cerrar"
+              onClick={onCerrar}
+              aria-label="Cerrar"
+              disabled={estaBloqueado}
+            >
+              ✕
+            </button>
           )}
         </div>
 
@@ -53,16 +96,18 @@ export function Modal({ modal, onCerrar }) {
           <div className="modal-pie">
             {modal.tipo === 'confirmacion' && (
               <>
-                <Button variante="secundario" onClick={onCerrar} disabled={modal.cargando}>
+                <Button
+                  variante="secundario"
+                  onClick={onCerrar}
+                  disabled={estaBloqueado}
+                >
                   {modal.labelCancelar || 'Cancelar'}
                 </Button>
                 <Button
                   variante={modal.variante === 'peligro' ? 'peligro' : 'primario'}
-                  cargando={modal.cargando}
-                  onClick={async () => {
-                    if (modal.onConfirmar) await modal.onConfirmar();
-                    onCerrar();
-                  }}
+                  cargando={estaBloqueado}
+                  disabled={estaBloqueado}
+                  onClick={manejarConfirmar}
                 >
                   {modal.labelConfirmar || 'Confirmar'}
                 </Button>
