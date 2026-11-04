@@ -12,6 +12,7 @@ import GraficoLineas from './GraficoLineas';
 import GraficoDona from './GraficoDona';
 import TablaDesempeno from './TablaDesempeno';
 import './DashboardBIPage.css';
+import { formatearIndicador } from '../../utils/indicadores';
 
 const PERIODOS = [
   { valor: '7',  label: 'Últimos 7 días' },
@@ -117,14 +118,14 @@ export default function DashboardBIPage() {
       <div className="grilla-kpi grilla-kpi-4">
         <KpiCard
           titulo="Cumplimiento turnos"
-          valor={indicadores ? `${indicadores.cumplimiento_turnos}%` : null}
+          valor={formatearIndicador(indicadores?.cumplimiento_turnos, '%')}
           variacion={compararPeriodo ? '+2.4%' : null}
           color="primario"
           cargando={cargando}
         />
         <KpiCard
           titulo="Cumplimiento servicios"
-          valor={indicadores ? `${indicadores.cumplimiento_servicios}%` : null}
+          valor={formatearIndicador(indicadores?.cumplimiento_servicios, '%')}
           variacion={compararPeriodo ? '+1.1%' : null}
           color="exito"
           cargando={cargando}
@@ -138,7 +139,7 @@ export default function DashboardBIPage() {
         />
         <KpiCard
           titulo="Tiempo prom. atención"
-          valor={indicadores ? `${indicadores.tiempo_promedio_atencion} min` : null}
+          valor={formatearIndicador(indicadores?.tiempo_promedio_atencion, ' min')}
           variacion={compararPeriodo ? '-5.0%' : null}
           color="advertencia"
           cargando={cargando}

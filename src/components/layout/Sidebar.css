@@ -62,7 +62,9 @@
   font-size: var(--tam-sm);
   color: var(--color-sidebar-texto);
   font-weight: 500;
-  transition: background var(--transicion), color var(--transicion);
+  transition:
+    background var(--transicion),
+    color var(--transicion);
   position: relative;
 }
 
@@ -122,4 +124,117 @@
     align-items: center;
     justify-content: center;
   }
+}
+.sidebar {
+  background: linear-gradient(180deg, #13253c, #122036);
+  border-right: 0;
+}
+.sidebar-logo {
+  height: 83px;
+  padding: 24px 22px;
+  border-bottom: 1px solid #ffffff08;
+  gap: 11px;
+}
+.sidebar-logo-icono {
+  width: 35px;
+  height: 38px;
+  border-radius: 11px;
+  background: #9be3cd;
+  color: #15354a;
+  box-shadow: 0 4px 16px #00000012;
+}
+.sidebar-logo-texto {
+  color: #f5f8fc;
+  font-size: 17px;
+  letter-spacing: -0.3px;
+}
+.sidebar-logo-texto small {
+  display: block;
+  font-size: 7px;
+  letter-spacing: 0.19em;
+  font-weight: 450;
+  color: #839bb4;
+  margin-top: 5px;
+}
+.sidebar-grupo {
+  padding: 27px 25px 13px;
+  color: #6f879f;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  font-weight: 550;
+}
+.sidebar-menu {
+  padding: 0 10px 22px;
+}
+.sidebar-enlace {
+  padding: 12px 13px;
+  margin: 3px 0;
+  gap: 11px;
+  font-size: 11px;
+  color: #9eb0c5;
+  border-radius: 9px;
+  font-weight: 450;
+}
+.sidebar-enlace > .icono-svg {
+  opacity: 0.8;
+}
+.sidebar-enlace:hover {
+  color: #fff;
+  background: #ffffff07;
+}
+.sidebar-enlace-activo,
+.sidebar-enlace-activo:hover {
+  background: #9be3cd;
+  color: #153b42;
+  font-weight: 650;
+  box-shadow: 0 4px 14px #0000000b;
+}
+.sidebar-enlace-activo::before {
+  display: none;
+}
+.sidebar-enlace-activo > .icono-svg {
+  opacity: 1;
+}
+.sidebar-cerrar-mobile {
+  color: #b7cadc;
+}
+.sidebar-pie {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 13px;
+  margin: 10px 16px 22px;
+  border: 1px solid #ffffff0b;
+  background: #ffffff04;
+  border-radius: 12px;
+}
+.sidebar-pie-icono {
+  display: grid;
+  place-items: center;
+  height: 31px;
+  width: 31px;
+  border-radius: 9px;
+  background: #9be3cd0b;
+  color: #89cbb8;
+  flex-shrink: 0;
+}
+.sidebar-pie strong {
+  color: #c1cfdd;
+  font-size: 9px;
+  font-weight: 500;
+  display: block;
+}
+.sidebar-pie small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #718da5;
+  font-size: 8px;
+  margin-top: 6px;
+}
+.sidebar-pie small > i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8ed7bd;
 }

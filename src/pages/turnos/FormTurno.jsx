@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { opcionesTurno } from '../../api/operaciones';
 import { useForm } from '../../hooks/useForm';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../../components/ui/Input';
@@ -6,7 +8,13 @@ import { Button } from '../../components/ui/Button';
 
 const validar = (v) => {
   const e = {};
-  if (!v.personalId) e.personalId = 'Seleccione personal';
+
+  if (!v.puesto?.trim()) e.puesto = 'Indique puesto o agencia';
+  if (
+    !Number.isInteger(Number(v.evidenciasRequeridas)) ||
+    Number(v.evidenciasRequeridas) < 0
+  )
+    e.evidenciasRequeridas = 'Cantidad inválida';
   if (!v.servicioId) e.servicioId = 'Seleccione servicio';
   if (!v.sedeId) e.sedeId = 'Seleccione sede';
   if (!v.fecha) e.fecha = 'Fecha requerida';
@@ -15,16 +23,63 @@ const validar = (v) => {
   return e;
 };
 
-export default function FormTurno({ personal, servicios, sedes, onGuardar, onCancelar, cargando }) {
+export default function FormTurno({
+  personal,
+  servicios,
+  sedes,
+  onGuardar,
+  onCancelar,
+  cargando,
+}) {
   const { usuario } = useAuth();
-  const { valores, errores, manejarCambio, manejarBlur, establecerValor, validarTodo } = useForm(
-    { personalId: '', servicioId: '', sedeId: '', fecha: '', horaInicio: '', horaFin: '', estado: 'sin_confirmar' },
+  const {
+    valores,
+    errores,
+    manejarCambio,
+    manejarBlur,
+    establecerValor,
+    validarTodo,
+  } = useForm(
+    {
+      personalId: '',
+      servicioId: '',
+      sedeId: '',
+      fecha: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()),
+      horaInicio: '',
+      horaFin: '',
+      estado: 'sin_confirmar',
+      puesto: '',
+      evidenciasRequeridas: 1,
+    },
     validar
   );
 
   const esSupervisor = usuario?.rol === 'supervisor';
+  const [opciones, setOpciones] = useState({ servicios: [], compatibilidades: [] });
+  const [consultando, setConsultando] = useState(true);
+  const [errorDisponibilidad, setErrorDisponibilidad] = useState('');
+  useEffect(() => {
+    let activo = true;
+    Promise.resolve().then(async () => {
+      if (!activo) return;
+      setConsultando(true);
+      try {
+        const q = { fecha: valores.fecha };
+        if (valores.horaInicio && valores.horaFin) Object.assign(q, { horaInicio: valores.horaInicio, horaFin: valores.horaFin });
+        const r = await opcionesTurno(q);
+        if (activo) { setOpciones(r); setErrorDisponibilidad(''); }
+      } catch (e) { if (activo) setErrorDisponibilidad(e.message); }
+      finally { if (activo) setConsultando(false); }
+    });
+    return () => { activo = false; };
+  }, [valores.fecha, valores.horaInicio, valores.horaFin]);
+  const compatible = (personalId, servicioId) => opciones.compatibilidades.some((p) => String(p.personalId) === String(personalId) && (!servicioId || String(p.servicioId) === String(servicioId)));
+  const serviciosDisponibles = opciones.servicios.filter((s) => !valores.personalId || compatible(valores.personalId, s.id));
+  const seleccionValida = (!valores.personalId || compatible(valores.personalId, valores.servicioId)) && opciones.servicios.some((s) => String(s.id) === String(valores.servicioId));
 
   const personalDisponible = personal.filter((p) => {
+    if (p.estado !== 'activo') return false;
+    if (!compatible(p.id, valores.servicioId)) return false;
     if (esSupervisor) {
       return p.cargo === 'agente';
     }
@@ -35,30 +90,53 @@ export default function FormTurno({ personal, servicios, sedes, onGuardar, onCan
     const nuevoServicioId = e.target.value;
     manejarCambio(e);
 
-    const serv = servicios.find((s) => String(s.id) === String(nuevoServicioId));
+    const serv = servicios.find(
+      (s) => String(s.id) === String(nuevoServicioId)
+    );
     if (serv) {
-      if (serv.fecha_inicio) establecerValor('fecha', serv.fecha_inicio);
-      if (serv.hora_inicio) establecerValor('horaInicio', serv.hora_inicio.slice(0, 5));
+      if (serv.hora_inicio)
+        establecerValor('horaInicio', serv.hora_inicio.slice(0, 5));
       if (serv.hora_fin) establecerValor('horaFin', serv.hora_fin.slice(0, 5));
       if (serv.sede_id) establecerValor('sedeId', String(serv.sede_id));
+      if (!valores.puesto) establecerValor('puesto', serv.nombre);
     }
   };
 
   const manejarSubmit = (e) => {
     e.preventDefault();
-    if (!validarTodo()) return;
+    if (!validarTodo() || consultando || !seleccionValida || errorDisponibilidad) return;
     onGuardar({
       ...valores,
-      personalId:  parseInt(valores.personalId, 10),
-      servicioId:  parseInt(valores.servicioId, 10),
-      sedeId:      parseInt(valores.sedeId, 10),
-      estado:      'sin_confirmar',
+      personalId: valores.personalId ? parseInt(valores.personalId, 10) : null,
+      servicioId: parseInt(valores.servicioId, 10),
+      sedeId: parseInt(valores.sedeId, 10),
+      estado: 'sin_confirmar',
+      evidenciasRequeridas: Number(valores.evidenciasRequeridas),
     });
   };
 
   return (
     <form onSubmit={manejarSubmit} noValidate>
+      <p className="turno-disponibilidad-ayuda" role="status">{consultando ? 'Consultando disponibilidad…' : 'Personal vinculado al servicio, con horario compatible y sin cruces.'}</p>
+      {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
       <div className="form-grilla">
+        <Input
+          id="form-t-puesto"
+          label="Puesto / agencia"
+          nombre="puesto"
+          valor={valores.puesto}
+          onChange={manejarCambio}
+          requerido
+          error={errores.puesto}
+        />
+        <Input
+          id="form-t-evidencias"
+          label="Evidencias exigidas"
+          nombre="evidenciasRequeridas"
+          tipo="number"
+          valor={valores.evidenciasRequeridas}
+          onChange={manejarCambio}
+        />
         <Select
           id="form-t-servicio"
           label="Servicio"
@@ -70,7 +148,7 @@ export default function FormTurno({ personal, servicios, sedes, onGuardar, onCan
           placeholder="Seleccionar servicio..."
           requerido
         >
-          {servicios.map((s) => (
+          {serviciosDisponibles.map((s) => (
             <option key={s.id} value={s.id}>
               {s.nombre}
             </option>
@@ -79,14 +157,14 @@ export default function FormTurno({ personal, servicios, sedes, onGuardar, onCan
 
         <Select
           id="form-t-personal"
-          label="Personal asignado"
+          label="Personal asignado (opcional)"
           nombre="personalId"
           valor={valores.personalId}
           onChange={manejarCambio}
           onBlur={manejarBlur}
           error={errores.personalId}
-          placeholder="Seleccionar personal..."
-          requerido
+          placeholder="Sin asignar: plaza requerida"
+          disabled={consultando}
         >
           {personalDisponible.map((p) => (
             <option key={p.id} value={p.id}>
@@ -94,6 +172,8 @@ export default function FormTurno({ personal, servicios, sedes, onGuardar, onCan
             </option>
           ))}
         </Select>
+        {!consultando && !personalDisponible.length && <p className="tarjeta-subtitulo">No hay personal disponible para esta selección. Cambie la fecha o el horario; también puede crear una plaza sin asignar.</p>}
+        {!consultando && valores.personalId && !seleccionValida && <p role="alert">La selección ya no es compatible. Elija otro agente o deje la plaza sin asignar.</p>}
 
         <Select
           id="form-t-sede"
@@ -154,7 +234,7 @@ export default function FormTurno({ personal, servicios, sedes, onGuardar, onCan
         <Button variante="secundario" onClick={onCancelar} disabled={cargando}>
           Cancelar
         </Button>
-        <Button tipo="submit" variante="primario" cargando={cargando}>
+        <Button tipo="submit" variante="primario" cargando={cargando} disabled={consultando || !seleccionValida || !!errorDisponibilidad}>
           Asignar turno
         </Button>
       </div>

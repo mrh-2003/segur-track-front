@@ -13,6 +13,9 @@ export function Icono({ nombre, tamano = 16, color = 'currentColor', className =
   };
 
   switch (nombre) {
+    case 'excel':
+    case 'reportes':
+      return <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 12h8M8 16h8M12 12v8M8 20h8"/></svg>;
     case 'editar':
       return (
         <svg {...props}>

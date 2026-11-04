@@ -60,3 +60,7 @@
   animation: shimmer 1.5s infinite;
   border-radius: var(--radio-md);
 }
+[data-theme='dark'] .tabla .accion-btn,
+[data-theme='dark'] .accion-btn{color:#fff}
+[data-theme='dark'] .tabla :is(button,a) svg,
+[data-theme='dark'] .accion-btn svg{color:#fff;stroke:#fff}

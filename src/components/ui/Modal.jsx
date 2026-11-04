@@ -4,17 +4,22 @@ import './Modal.css';
 
 export function Modal({ modal, onCerrar }) {
   const dialogRef = useRef(null);
-  const [accionEnCurso, setAccionEnCurso] = useState(false);
+  const [accion, setAccion] = useState(null);
+  const accionEnCurso = accion?.modal === modal && accion.ocupada;
 
   useEffect(() => {
     if (!modal) return;
-    setAccionEnCurso(false);
     const el = dialogRef.current;
     if (!el) return;
     el.focus();
 
     const manejarEscape = (e) => {
-      if (e.key === 'Escape' && modal.tipo !== 'formulario' && !accionEnCurso && !modal.cargando) {
+      if (
+        e.key === 'Escape' &&
+        modal.tipo !== 'formulario' &&
+        !accionEnCurso &&
+        !modal.cargando
+      ) {
         onCerrar();
       }
     };
@@ -28,14 +33,14 @@ export function Modal({ modal, onCerrar }) {
 
   const manejarConfirmar = async () => {
     if (estaBloqueado) return;
-    setAccionEnCurso(true);
+    setAccion({ modal, ocupada: true });
     try {
       if (modal.onConfirmar) {
         await modal.onConfirmar();
       }
       onCerrar();
     } catch {
-      setAccionEnCurso(false);
+      setAccion(null);
     }
   };
 
@@ -53,7 +58,11 @@ export function Modal({ modal, onCerrar }) {
     <div
       className="modal-overlay"
       onClick={(e) => {
-        if (e.target === e.currentTarget && modal.tipo !== 'formulario' && !estaBloqueado) {
+        if (
+          e.target === e.currentTarget &&
+          modal.tipo !== 'formulario' &&
+          !estaBloqueado
+        ) {
           onCerrar();
         }
       }}
@@ -67,7 +76,9 @@ export function Modal({ modal, onCerrar }) {
         ref={dialogRef}
       >
         <div className="modal-encabezado">
-          <h2 id="modal-titulo" className="modal-titulo">{modal.titulo}</h2>
+          <h2 id="modal-titulo" className="modal-titulo">
+            {modal.titulo}
+          </h2>
           {modal.tipo !== 'confirmacion' && (
             <button
               className="modal-cerrar"
@@ -88,7 +99,11 @@ export function Modal({ modal, onCerrar }) {
           )}
 
           {modal.tipo === 'informacion' && (
-            <p className={`modal-mensaje modal-info-${modal.variante || 'info'}`}>{modal.mensaje}</p>
+            <p
+              className={`modal-mensaje modal-info-${modal.variante || 'info'}`}
+            >
+              {modal.mensaje}
+            </p>
           )}
         </div>
 
@@ -104,7 +119,9 @@ export function Modal({ modal, onCerrar }) {
                   {modal.labelCancelar || 'Cancelar'}
                 </Button>
                 <Button
-                  variante={modal.variante === 'peligro' ? 'peligro' : 'primario'}
+                  variante={
+                    modal.variante === 'peligro' ? 'peligro' : 'primario'
+                  }
                   cargando={estaBloqueado}
                   disabled={estaBloqueado}
                   onClick={manejarConfirmar}
@@ -114,7 +131,9 @@ export function Modal({ modal, onCerrar }) {
               </>
             )}
             {modal.tipo === 'informacion' && (
-              <Button variante="primario" onClick={onCerrar}>Aceptar</Button>
+              <Button variante="primario" onClick={onCerrar}>
+                Aceptar
+              </Button>
             )}
           </div>
         )}

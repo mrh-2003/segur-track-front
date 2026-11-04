@@ -1,473 +1,1067 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
-import { useAsync } from '../../hooks/useAsync';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  listarCriterios, actualizarPesosCriterios,
-  evaluarServicio, resultadoMulticriterio, detalleServicioMcda,
-  obtenerIndicadoresMulticriterio,
+  resultadoMulticriterio,
+  detalleServicioMcda,
+  evaluarServicio,
+  actualizarPesosCriterios,
 } from '../../api/multicriterio';
-import { listarServicios } from '../../api/servicios';
-import { KpiCard } from '../../components/ui/KpiCard';
-import { Table } from '../../components/ui/Table';
-import { Badge } from '../../components/ui/Badge';
+import { catalogosOperativos } from '../../api/operaciones';
 import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
+import { Table } from '../../components/ui/Table';
+import {
+  Nivel,
+  Anillo,
+  IconoMonitor,
+  MiniLinea,
+  GraficoEvolucion,
+} from './MonitorVisuals';
+import { CORTOS, COLORES, porcentaje } from './monitor.presentacion';
 import './MonitorMulticriterioPage.css';
-
-export default function MonitorMulticriterioPage() {
-  const { usuario } = useAuth();
-  const [criterios, setCriterios] = useState([]);
-  const [resultado, setResultado] = useState({ resumen: null, tabla: [], indicadores: null });
-  const [indicadores, setIndicadores] = useState(null);
-  const [servicios, setServicios] = useState([]);
-  const [detalle, setDetalle] = useState(null);
-  const [servicioSelId, setServicioSelId] = useState('');
-  const [filtroNivel, setFiltroNivel] = useState('');
-  const [cargando, setCargando] = useState(true);
-  const { abrirModal, cerrarModal, informar } = useModal();
-  const { cargando: cargandoAccion, ejecutar } = useAsync();
-
-  const cargar = useCallback(async () => {
-    try {
-      const [c, r, s, ind] = await Promise.all([
-        listarCriterios(),
-        resultadoMulticriterio(),
-        listarServicios(),
-        obtenerIndicadoresMulticriterio().catch(() => null),
-      ]);
-      setCriterios(c);
-      setResultado(r);
-      setServicios(s);
-      setIndicadores(ind || r?.indicadores || null);
-    } finally {
-      setCargando(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void cargar();
-  }, [cargar]);
-
-  const manejarEvaluar = async () => {
-    if (!servicioSelId) {
-      informar('Aviso', 'Seleccione un servicio para evaluar', 'advertencia');
-      return;
-    }
-    await ejecutar(async () => {
-      try {
-        await evaluarServicio(parseInt(servicioSelId, 10));
-        await cargar();
-        informar('Evaluación completada', 'El servicio fue evaluado correctamente', 'exito');
-      } catch (err) {
-        informar('Error', err.message, 'error');
-      }
-    });
-  };
-
-  const manejarVerDetalle = async (id) => {
-    try {
-      const d = await detalleServicioMcda(id);
-      setDetalle(d);
-    } catch (err) {
-      informar('Error', err.message, 'error');
-    }
-  };
-
-  const abrirEditarPesos = () => {
-    const pesos = criterios.map((c) => ({ ...c, nuevoPeso: c.peso }));
-    abrirModal({
-      tipo: 'formulario',
-      titulo: 'Editar pesos de criterios',
-      contenido: (
-        <FormPesos
-          criterios={pesos}
-          onGuardar={async (datos) => {
-            await ejecutar(async () => {
-              try {
-                await actualizarPesosCriterios({ criterios: datos });
-                cerrarModal();
-                await cargar();
-                informar('Pesos actualizados', 'Los pesos fueron actualizados correctamente', 'exito');
-              } catch (err) {
-                informar('Error', err.message, 'error');
-              }
-            });
-          }}
-          onCancelar={cerrarModal}
-          cargando={cargandoAccion}
-        />
-      ),
-    });
-  };
-
-  const columnas = [
-    { llave: 'servicio', titulo: 'Servicio' },
-    { llave: 'evaluacion', titulo: 'Puntaje', render: (f) => `${f.evaluacion}%` },
-    { llave: 'nivel', titulo: 'Nivel', render: (f) => <Badge valor={f.nivel} /> },
-    {
-      llave: 'criterios_influyen',
-      titulo: 'Criterios que influyen',
-      render: (f) => (f.criterios_influyen || []).join(', ') || '—',
-    },
-    {
-      llave: 'acciones',
-      titulo: '',
-      render: (f) => (
-        <button
-          type="button"
-          className="accion-btn"
-          onClick={() => manejarVerDetalle(f.servicio_id || f.id)}
-        >
-          Ver detalle
-        </button>
-      ),
-    },
-  ];
-
-  const tablaFiltrada = filtroNivel
-    ? (resultado.tabla || []).filter((f) => f.nivel === filtroNivel)
-    : (resultado.tabla || []);
-
-  const totalServ = indicadores?.totalServicios ?? resultado?.indicadores?.totalServicios ?? 0;
-  const duracionProm = indicadores?.duracionPromedioHoras ?? resultado?.indicadores?.duracionPromedioHoras ?? 0;
-  const listaClientes = indicadores?.serviciosPorCliente ?? resultado?.indicadores?.serviciosPorCliente ?? [];
-  const listaHoras = indicadores?.serviciosPorHoraInicio ?? resultado?.indicadores?.serviciosPorHoraInicio ?? [];
-  const topAgentes = indicadores?.topAgentes ?? resultado?.indicadores?.topAgentes ?? [];
-  const topClientes = indicadores?.topClientes ?? resultado?.indicadores?.topClientes ?? [];
-
-  const maxServCliente = listaClientes.reduce((max, c) => Math.max(max, c.total || 0), 1);
-  const maxServHora = listaHoras.reduce((max, h) => Math.max(max, h.total || 0), 1);
-
+const numero = (v) =>
+  v === null || v === undefined ? '—' : Number(v).toFixed(1);
+function Calculo({ servicio, filtros }) {
   return (
-    <div className="fade-in">
-      <div className="pagina-encabezado">
-        <div>
-          <h1 className="pagina-titulo">Monitor multicriterio</h1>
-          <p className="pagina-subtitulo">Evaluación de criterios e indicadores operativos de servicios</p>
-        </div>
-        <div className="pagina-acciones">
-          <Select
-            id="sel-servicio-evaluar"
-            nombre="servicioId"
-            valor={servicioSelId}
-            onChange={(e) => setServicioSelId(e.target.value)}
-            placeholder="Seleccionar servicio"
-          >
-            {servicios.map((s) => (
-              <option key={s.id} value={s.id}>{s.nombre}</option>
+    <div className="mv-calculo">
+      <h3>
+        {servicio.servicio} · {numero(servicio.puntaje)} / 100
+      </h3>
+      <p>
+        {filtros.inicio
+          ? new Date(filtros.inicio).toLocaleDateString('es-PE', {
+              timeZone: 'America/Lima',
+            })
+          : 'Todo el histórico'}{' '}
+        al{' '}
+        {new Date(filtros.fin).toLocaleString('es-PE', {
+          timeZone: 'America/Lima',
+        })}{' '}
+        · {filtros.turno} · operativo-v2
+      </p>
+      <Table
+        columnas={[
+          { llave: 'nombre', titulo: 'Criterio' },
+          {
+            llave: 'dato',
+            titulo: 'Dato observado',
+            render: (c) =>
+              `${c.numerador} / ${c.denominador} · ${c.tasa === null ? c.estado : numero(c.tasa) + ' %'}`,
+          },
+          {
+            llave: 'umbral',
+            titulo: 'Umbral de riesgo',
+            render: (c) => `${c.umbral} %`,
+          },
+          {
+            llave: 'riesgo',
+            titulo: 'Riesgo normalizado',
+            render: (c) => numero(c.riesgo),
+          },
+          {
+            llave: 'peso',
+            titulo: 'Peso',
+            render: (c) => `${numero(c.peso * 100)} %`,
+          },
+          {
+            llave: 'aporte',
+            titulo: 'Aporte',
+            render: (c) => numero(c.aporte),
+          },
+        ]}
+        datos={servicio.criterios}
+      />
+      <p>
+        <strong>
+          Riesgo = mínimo(100, (100 − cumplimiento) ÷ umbral × 100).
+        </strong>
+      </p>
+      <p>
+        Aporte = riesgo × peso. Puntaje = suma de los cinco aportes. Mayor
+        puntaje significa mayor necesidad de atención.
+      </p>
+      <p>
+        {servicio.completo
+          ? servicio.criterios.map((c) => numero(c.aporte)).join(' + ') +
+            ' = ' +
+            numero(servicio.puntaje) +
+            ' puntos.'
+          : 'Evaluación incompleta: revise los datos faltantes. No se redistribuyen los pesos.'}
+      </p>
+      {servicio.criterios.some((c) => c.faltantes > 0) && (
+        <ul>
+          {servicio.criterios
+            .filter((c) => c.faltantes > 0)
+            .map((c) => (
+              <li key={c.codigo}>
+                {c.nombre}: {c.faltantes} registro(s) por completar.
+              </li>
             ))}
-          </Select>
-          <Button variante="primario" cargando={cargandoAccion} onClick={manejarEvaluar}>
-            Evaluar
-          </Button>
-          {(usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones') && (
-            <Button variante="secundario" onClick={abrirEditarPesos}>
-              Editar pesos
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="grilla-kpi" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-        <KpiCard
-          titulo="Total de servicios"
-          valor={totalServ}
-          color="primario"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Duración promedio"
-          valor={`${duracionProm} hrs`}
-          color="morado"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Evaluados"
-          valor={resultado.resumen?.evaluados ?? 0}
-          color="primario"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Alta atención"
-          valor={resultado.resumen?.alta ?? 0}
-          color="peligro"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Media atención"
-          valor={resultado.resumen?.media ?? 0}
-          color="advertencia"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Baja atención"
-          valor={resultado.resumen?.baja ?? 0}
-          color="exito"
-          cargando={cargando}
-        />
-      </div>
-
-      <div className="tarjeta" style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-          <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Resultados por servicio</h3>
-          <div style={{ width: 240 }}>
-            <Select
-              id="filtro-nivel-atencion"
-              nombre="filtroNivel"
-              valor={filtroNivel}
-              onChange={(e) => setFiltroNivel(e.target.value)}
-              placeholder="Todos los niveles de atención"
-            >
-              <option value="alta">Alta atención</option>
-              <option value="media">Media atención</option>
-              <option value="baja">Baja atención</option>
-            </Select>
-          </div>
-        </div>
-        <Table
-          columnas={columnas}
-          datos={tablaFiltrada}
-          cargando={cargando}
-          vacio={filtroNivel ? 'No existen servicios en el nivel de atención seleccionado.' : 'Sin evaluaciones. Use el botón Evaluar para comenzar.'}
-        />
-      </div>
-
-      <div className="grilla-contenido grilla-1-1" style={{ marginTop: 20 }}>
-        <div className="tarjeta">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Criterios de evaluación</h3>
-            <span className="indicador-badge-count">{criterios.length} criterios activos</span>
-          </div>
-          <div className="criterios-lista">
-            {criterios.map((c) => (
-              <div key={c.id} className="criterio-item">
-                <div className="criterio-info">
-                  <span className="criterio-codigo">{c.codigo}</span>
-                  <span className="criterio-nombre">{c.nombre}</span>
-                </div>
-                <div className="criterio-peso">
-                  <div className="criterio-barra-contenedor">
-                    <div className="criterio-barra" style={{ width: `${c.peso * 100}%` }} />
-                  </div>
-                  <span className="criterio-pct">{(c.peso * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {detalle && detalle.length > 0 ? (
-          <div className="tarjeta">
-            <h3 className="tarjeta-titulo">Detalle del servicio</h3>
-            <p className="tarjeta-subtitulo">
-              Puntaje global: {detalle[0].puntaje_global}% — Nivel: <Badge valor={detalle[0].nivel} />
-            </p>
-            <div className="detalle-criterios">
-              {detalle.map((d, i) => (
-                <div key={i} className="detalle-criterio-item">
-                  <div className="detalle-criterio-header">
-                    <span className="detalle-criterio-nombre">{d.criterio}</span>
-                    <span className={`detalle-criterio-pct ${d.puntaje_criterio < 60 ? 'pct-alerta' : 'pct-ok'}`}>
-                      {d.puntaje_criterio}%
-                    </span>
-                  </div>
-                  <div className="barra-detalle-contenedor">
-                    <div
-                      className={`barra-detalle ${d.puntaje_criterio < 60 ? 'barra-alerta' : 'barra-ok'}`}
-                      style={{ width: `${d.puntaje_criterio}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="tarjeta">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Top 3 clientes con más servicios</h3>
-              <span className="indicador-badge-count">Destacados</span>
-            </div>
-            <div className="lista-top-items">
-              {topClientes.map((tc, idx) => (
-                <div key={tc.id} className="top-item-row">
-                  <div className="top-item-left">
-                    <span className={`top-ranking-num top-ranking-${idx + 1}`}>{idx + 1}</span>
-                    <div>
-                      <div className="top-item-titulo">{tc.cliente}</div>
-                      <div className="top-item-sub">Cliente corporativo</div>
-                    </div>
-                  </div>
-                  <span className="top-item-badge">{tc.total_servicios} servicios</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="seccion-indicadores-titulo">
-        <span>Indicadores operativos</span>
-      </div>
-
-      <div className="grilla-contenido grilla-1-1">
-        <div className="tarjeta">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Servicios por cliente</h3>
-            <span className="indicador-badge-count">{listaClientes.length} clientes</span>
-          </div>
-          <div className="distribucion-lista">
-            {listaClientes.map((item) => {
-              const porcentaje = Math.round((item.total / maxServCliente) * 100);
-              return (
-                <div key={item.id} className="distribucion-item">
-                  <div className="distribucion-header">
-                    <span className="distribucion-label">{item.cliente}</span>
-                    <span className="distribucion-val">{item.total} servicios</span>
-                  </div>
-                  <div className="distribucion-barra-bg">
-                    <div
-                      className="distribucion-barra-fill distribucion-barra-cliente"
-                      style={{ width: `${porcentaje}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="tarjeta">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Servicios por hora de inicio</h3>
-            <span className="indicador-badge-count">Distribución horaria</span>
-          </div>
-          <div className="distribucion-lista">
-            {listaHoras.map((item) => {
-              const porcentaje = Math.round((item.total / maxServHora) * 100);
-              return (
-                <div key={item.franja} className="distribucion-item">
-                  <div className="distribucion-header">
-                    <span className="distribucion-label">{item.franja} hrs</span>
-                    <span className="distribucion-val">{item.total} servicios</span>
-                  </div>
-                  <div className="distribucion-barra-bg">
-                    <div
-                      className="distribucion-barra-fill distribucion-barra-hora"
-                      style={{ width: `${porcentaje}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="tarjeta" style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 className="tarjeta-titulo" style={{ margin: 0 }}>Top 10 agentes con más servicios</h3>
-          <span className="indicador-badge-count">{topAgentes.length} agentes listados</span>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="tabla-agentes-compacta">
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>#</th>
-                <th>Agente</th>
-                <th>Documento</th>
-                <th style={{ textAlign: 'right' }}>Servicios Asignados</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topAgentes.map((agente, idx) => (
-                <tr key={agente.id}>
-                  <td>
-                    <span
-                      className={`top-ranking-num ${idx < 3 ? `top-ranking-${idx + 1}` : ''}`}
-                      style={{ width: 22, height: 22, fontSize: '0.7rem' }}
-                    >
-                      {idx + 1}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 600 }}>{agente.nombre}</td>
-                  <td style={{ color: 'var(--color-texto-secundario)' }}>{agente.documento}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <span className="top-item-badge">{agente.total_servicios}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </ul>
+      )}
+      <p className="tarjeta-subtitulo">
+        Sin casos u obligaciones: aporte cero solo cuando no hay datos
+        pendientes. Los pesos y umbrales iniciales son configurables y requieren
+        validación operativa.
+      </p>
     </div>
   );
 }
-
-function FormPesos({ criterios: inicial, onGuardar, onCancelar, cargando }) {
-  const [pesos, setPesos] = useState(
-    inicial.map((c) => ({ id: c.id, nombre: c.nombre, peso: parseFloat(c.peso) }))
-  );
-  const suma = pesos.reduce((s, p) => s + p.peso, 0);
-  const valida = Math.abs(suma - 1) < 0.001;
-
-  const actualizar = (id, valor) => {
-    setPesos((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, peso: parseFloat(valor) || 0 } : p))
-    );
-  };
-
+function Configuracion({ criterios, onGuardar }) {
+  const [items, setItems] = useState(
+      criterios.map((c) => ({
+        ...c,
+        peso: Number(c.peso),
+        umbral: Number(c.umbral),
+      }))
+    ),
+    [error, setError] = useState(''),
+    [ocupado, setOcupado] = useState(false);
+  const suma = items.reduce((n, c) => n + c.peso, 0);
   return (
-    <div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-        {pesos.map((p) => (
-          <div
-            key={p.id}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}
-          >
-            <span style={{ fontSize: 'var(--tam-sm)' }}>{p.nombre}</span>
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setOcupado(true);
+        try {
+          await onGuardar(
+            items.map((c) => ({ id: c.codigo, peso: c.peso, umbral: c.umbral }))
+          );
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setOcupado(false);
+        }
+      }}
+    >
+      {items.map((c, i) => (
+        <div key={c.codigo} className="mc-config">
+          <strong>{c.nombre}</strong>
+          <label>
+            Peso (%)
             <input
+              className="campo-input"
               type="number"
-              step="0.05"
               min="0"
-              max="1"
-              value={p.peso}
-              onChange={(e) => actualizar(p.id, e.target.value)}
-              style={{
-                width: 80,
-                padding: '6px 8px',
-                border: '1.5px solid var(--color-borde)',
-                borderRadius: 'var(--radio-sm)',
-                background: 'var(--color-superficie)',
-                color: 'var(--color-texto-principal)',
-              }}
+              max="100"
+              step="0.1"
+              value={Math.round(c.peso * 1000) / 10}
+              onChange={(e) =>
+                setItems(
+                  items.map((x, j) =>
+                    j === i ? { ...x, peso: Number(e.target.value) / 100 } : x
+                  )
+                )
+              }
             />
+          </label>
+          <label>
+            Umbral (%)
+            <input
+              className="campo-input"
+              type="number"
+              min="1"
+              max="100"
+              value={c.umbral}
+              onChange={(e) =>
+                setItems(
+                  items.map((x, j) =>
+                    j === i ? { ...x, umbral: Number(e.target.value) } : x
+                  )
+                )
+              }
+            />
+          </label>
+        </div>
+      ))}
+      <p>
+        Suma: {numero(suma * 100)} %. Los cambios se aplican a nuevos cálculos;
+        las evaluaciones guardadas mantienen su configuración.
+      </p>
+      {error && <p role="alert">{error}</p>}
+      <Button tipo="submit" disabled={ocupado || Math.abs(suma - 1) > 0.000001}>
+        Guardar configuración
+      </Button>
+    </form>
+  );
+}
+export default function MonitorMulticriterioPage() {
+  const [f, setF] = useState({ periodo: '30', servicios: '', turno: 'ambos' });
+  const [tab, setTab] = useState(0),
+    [data, setData] = useState(null),
+    [servicios, setServicios] = useState([]);
+  const [detalle, setDetalle] = useState(null),
+    [nivel, setNivel] = useState(''),
+    [error, setError] = useState('');
+  const [cargando, setCargando] = useState(true),
+    [guardando, setGuardando] = useState(false);
+  const { abrirModal, cerrarModal, informar } = useModal(),
+    { usuario } = useAuth(),
+    navigate = useNavigate();
+  const cargar = useCallback(async () => {
+    const r = await resultadoMulticriterio(f);
+    setData(r);
+    setDetalle(null);
+  }, [f]);
+  useEffect(() => {
+    let activo = true;
+    Promise.resolve()
+      .then(() => {
+        if (activo) setCargando(true);
+        return resultadoMulticriterio(f);
+      })
+      .then((r) => {
+        if (activo) {
+          setData(r);
+          setDetalle(null);
+          setError('');
+        }
+      })
+      .catch((e) => {
+        if (activo) setError(e.message);
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+    return () => {
+      activo = false;
+    };
+  }, [f]);
+  useEffect(() => {
+    catalogosOperativos()
+      .then((c) => setServicios(c.servicios))
+      .catch((e) => setError(e.message));
+  }, []);
+  const tabla = data?.tabla || [],
+    criterios = data?.criterios || [];
+  const totales = criterios.map((c, i) => {
+    const n = tabla.reduce((a, s) => a + s.criterios[i].numerador, 0),
+      d = tabla.reduce((a, s) => a + s.criterios[i].denominador, 0);
+    return { ...c, tasa: d ? (n / d) * 100 : null, n, d };
+  });
+  const niveles = ['alta', 'media', 'baja'].map((n) => ({
+    nivel: n,
+    cantidad: tabla.filter((s) => s.nivel === n).length,
+  }));
+  const filtrados = tabla.filter((s) => !nivel || s.nivel === nivel),
+    cumplimiento = totales[0]?.tasa,
+    cobertura = totales[2]?.tasa;
+  const totalTurnos = tabla.reduce((n, s) => n + s.turnos, 0),
+    criticas = detalle?.criticas || data?.criticas || [];
+  const fechaCorte = data
+    ? new Date(data.filtros.fin).toLocaleString('es-PE', {
+        timeZone: 'America/Lima',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Actualizando';
+  const calculo = (s) =>
+    abrirModal({
+      tipo: 'formulario',
+      tamano: 'xl',
+      titulo: 'Ver cálculo · evaluación multicriterio',
+      contenido: <Calculo servicio={s} filtros={data.filtros} />,
+    });
+  const verDetalle = async (s) => {
+    try {
+      setDetalle(await detalleServicioMcda(s.id, f));
+      requestAnimationFrame(() =>
+        document
+          .getElementById('detalle-servicio')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      );
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  const ayuda = () =>
+    abrirModal({
+      tipo: 'formulario',
+      tamano: 'lg',
+      titulo: 'Tu guía del monitor',
+      contenido: (
+        <div className="mv-guia">
+          <p>De la operación al seguimiento, en cuatro pasos.</p>
+          {[
+            [
+              'Filtra tu operación',
+              'Elige periodo, servicios y franja. Los filtros se mantienen al cambiar de vista.',
+            ],
+            [
+              'Identifica prioridades',
+              'El puntaje de criticidad va de 0 a 100: cuanto más alto, mayor necesidad de atención. Las tasas de cumplimiento funcionan al revés: cuanto más altas, mejor.',
+            ],
+            [
+              'Revisa la explicación',
+              'Abre un servicio y pulsa Ver cálculo para consultar cantidades, umbrales, pesos y aportes.',
+            ],
+            [
+              'Actúa y sigue la evolución',
+              'Consulta la incidencia, coordina con su responsable y revisa los indicadores en Evolución. Guardar evaluación conserva una instantánea.',
+            ],
+          ].map(([t, d], i) => (
+            <article key={t}>
+              <b>{i + 1}</b>
+              <div>
+                <h3>{t}</h3>
+                <p>{d}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ),
+    });
+  const guardar = async () => {
+    setGuardando(true);
+    try {
+      setData(await evaluarServicio(null, f));
+      informar(
+        'Evaluación guardada',
+          'Se conservó una instantánea por servicio con filtros, criterios, pesos, tasas y puntaje para auditoría. Las consultas en vivo seguirán mostrando los datos actuales.',
+        'exito'
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+  const tarjetas = [
+    {
+      titulo: 'Cobertura operativa',
+      valor: porcentaje(cobertura),
+      nota: `${totales[2]?.n ?? 0} de ${totales[2]?.d ?? 0} plazas cubiertas`,
+      icono: 'escudo',
+      tono: 'verde',
+      tendencia: (data?.evolucion || []).map((d) => d.criterios[2].tasa),
+    },
+    {
+      titulo: 'Servicios prioritarios',
+      valor: data?.resumen.alta ?? 0,
+      nota: 'Requieren atención del supervisor',
+      icono: 'alerta',
+      tono: 'coral',
+    },
+    {
+      titulo: 'Incidencias pendientes',
+      valor: data?.resumen.pendientes ?? 0,
+      nota: 'Abiertas y en atención en el periodo',
+      icono: 'reloj',
+      tono: 'ambar',
+    },
+    {
+      titulo: 'Turnos sin cubrir',
+      valor: data?.resumen.sin_cubrir ?? 0,
+      nota: 'Plazas vacantes o sin presencia',
+      icono: 'personal',
+      tono: 'violeta',
+    },
+  ];
+  const incidentes = (lista, limite = 5) =>
+    lista.slice(0, limite).map((i) => (
+      <button
+        type="button"
+        className="mv-incidente"
+        key={i.id}
+        onClick={() =>
+          navigate('/incidencias', { state: { servicioId: i.servicio_id } })
+        }
+      >
+        <span className={`mv-incidente-icono ${i.prioridad}`}>
+          <IconoMonitor nombre="alerta" tamano={17} />
+        </span>
+        <span className="mv-incidente-info">
+          <span>
+            <b>{i.codigo}</b>
+            <small className={`mv-prioridad-texto ${i.prioridad}`}>
+              {i.prioridad}
+            </small>
+          </span>
+          <strong>{i.tipo}</strong>
+          <small>{i.servicio}</small>
+          <small>{i.responsable?.trim() || 'Responsable por asignar'}</small>
+        </span>
+        <IconoMonitor nombre="flecha" tamano={15} />
+      </button>
+    ));
+  return (
+    <div className="mv-page">
+      <header className="mv-hero">
+        <div className="mv-hero-copy">
+          <div className="mv-hero-eyebrow">
+            <span className="mv-live-dot" />
+            CENTRO DE OPERACIONES
+            {data?.demo && <span className="mv-demo-pill">DEMO</span>}
+          </div>
+          <h1>
+            Monitor multicriterio
+            <span>Una visión completa de tu operación.</span>
+          </h1>
+          <p>
+            Detecta prioridades, entiende sus causas y acompaña cada decisión
+            con datos.
+          </p>
+          <div className="mv-hero-meta">
+            <span>
+              <IconoMonitor nombre="escudo" tamano={15} />
+              {data?.resumen.evaluados ?? 0} servicios evaluados
+            </span>
+            <span>
+              <IconoMonitor nombre="reloj" tamano={15} />
+              {fechaCorte} · Lima
+            </span>
+          </div>
+        </div>
+        <div className="mv-hero-balance">
+          <Anillo valor={cumplimiento} tamano={106}>
+            <strong>{porcentaje(cumplimiento)}</strong>
+            <small>CUMPLIMIENTO</small>
+          </Anillo>
+          <div>
+            <span>Desempeño del personal</span>
+            <strong>
+              {totalTurnos.toLocaleString('es-PE')}
+              <small> turnos analizados</small>
+            </strong>
+            <p>Cinco criterios. Un mismo panorama.</p>
+          </div>
+        </div>
+        <button type="button" className="mv-ayuda" onClick={ayuda}>
+          <IconoMonitor nombre="ayuda" tamano={17} />
+          Cómo usarlo
+        </button>
+        <span className="mv-hero-decor" aria-hidden="true" />
+      </header>
+      <section className="mv-filtros" aria-label="Filtros del monitor">
+        <div className="mv-periodo">
+          <label>Periodo de análisis</label>
+          <div className="mv-segmentos">
+            {['3', '7', '30', 'todos'].map((v) => (
+              <button
+                type="button"
+                key={v}
+                className={f.periodo === v ? 'activo' : ''}
+                onClick={() => setF({ ...f, periodo: v })}
+              >
+                {v === 'todos' ? 'Todo' : `${v} días`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mv-selector-servicios">
+          <label>Servicios</label>
+          <details>
+            <summary>
+              <IconoMonitor nombre="matriz" tamano={16} />
+              {f.servicios
+                ? `${f.servicios.split(',').length} seleccionados`
+                : 'Todos los servicios'}
+              <span>⌄</span>
+            </summary>
+            <div>
+              {servicios.map((s) => (
+                <label key={s.id}>
+                  <input
+                    type="checkbox"
+                    checked={f.servicios.split(',').includes(String(s.id))}
+                    onChange={(e) => {
+                      const ids = new Set(
+                        f.servicios.split(',').filter(Boolean)
+                      );
+                      if (e.target.checked) ids.add(String(s.id));
+                      else ids.delete(String(s.id));
+                      setF({ ...f, servicios: [...ids].join(',') });
+                    }}
+                  />
+                  {s.nombre}
+                </label>
+              ))}
+            </div>
+          </details>
+        </div>
+        <div className="mv-franjas">
+          <label>Franja del turno</label>
+          <div className="mv-segmentos">
+            {[
+              ['ambos', 'Ambos', 'reloj'],
+              ['diurno', 'Día', 'sol'],
+              ['nocturno', 'Noche', 'luna'],
+            ].map(([v, n, icono]) => (
+              <button
+                type="button"
+                key={v}
+                className={f.turno === v ? 'activo' : ''}
+                onClick={() => setF({ ...f, turno: v })}
+              >
+                <IconoMonitor nombre={icono} tamano={14} />
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="mv-reset"
+          onClick={() => setF({ periodo: '30', servicios: '', turno: 'ambos' })}
+        >
+          Restablecer
+        </button>
+      </section>
+      {error && (
+        <p className="mv-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="mv-kpis" aria-busy={cargando}>
+        {tarjetas.map((k) => (
+          <article className={`mv-kpi ${k.tono}`} key={k.titulo}>
+            <div className="mv-kpi-top">
+              <span>{k.titulo}</span>
+              <i>
+                <IconoMonitor nombre={k.icono} tamano={19} />
+              </i>
+            </div>
+            <div className="mv-kpi-value">
+              <strong>{cargando ? '…' : k.valor}</strong>
+              {k.tendencia && <MiniLinea valores={k.tendencia} />}
+            </div>
+            <p>
+              <span className="mv-kpi-dot" />
+              {k.nota}
+            </p>
+          </article>
+        ))}
+      </div>
+      <div className="mv-indicadores" aria-label="Los cinco indicadores">
+        {totales.map((c, i) => (
+          <div key={c.codigo}>
+            <span>
+              <i style={{ background: COLORES[i] }} />
+              {CORTOS[i]}
+            </span>
+            <strong>{porcentaje(c.tasa)}</strong>
+            <div className="mv-mini-progress">
+              <i style={{ width: `${c.tasa ?? 0}%`, background: COLORES[i] }} />
+            </div>
           </div>
         ))}
-        <p
-          style={{
-            fontSize: 'var(--tam-xs)',
-            color: valida ? 'var(--color-exito)' : 'var(--color-peligro)',
-            fontWeight: 600,
-          }}
-        >
-          Suma actual: {suma.toFixed(3)} (debe ser 1.000)
-        </p>
       </div>
-      <div className="form-pie">
-        <Button variante="secundario" onClick={onCancelar} disabled={cargando}>
-          Cancelar
-        </Button>
+      <nav className="mv-tabs" role="tablist" aria-label="Vistas del monitor">
+        {[
+          ['Prioridades', 'escudo'],
+          ['Matriz multicriterio', 'matriz'],
+          ['Evolución', 'tendencia'],
+          ['Método y validación', 'metodo'],
+        ].map(([n, icono], i) => (
+          <button
+            type="button"
+            key={n}
+            role="tab"
+            aria-selected={tab === i}
+            onClick={() => setTab(i)}
+            className={tab === i ? 'activo' : ''}
+          >
+            <IconoMonitor nombre={icono} tamano={17} />
+            {n}
+            {i === 0 && !!data?.resumen.alta && (
+              <span>{data.resumen.alta}</span>
+            )}
+          </button>
+        ))}
+      </nav>
+      {tab === 0 && (
+        <>
+          <div className="mv-prioridades-grid">
+            <section className="mv-panel mv-ranking">
+              <div className="mv-panel-heading">
+                <div>
+                  <span className="mv-eyebrow">DÓNDE PONER EL FOCO</span>
+                  <h2>Prioridades por servicio</h2>
+                  <p>Ordenados de mayor a menor necesidad de atención.</p>
+                </div>
+                <select
+                  className="mv-select-nivel"
+                  aria-label="Filtrar nivel de atención"
+                  value={nivel}
+                  onChange={(e) => setNivel(e.target.value)}
+                >
+                  <option value="">Todos los niveles</option>
+                  <option value="alta">Prioridad alta</option>
+                  <option value="media">En seguimiento</option>
+                  <option value="baja">Bajo control</option>
+                </select>
+              </div>
+              <div className="mv-ranking-labels">
+                <span>SERVICIO / CLIENTE</span>
+                <span>CRITICIDAD</span>
+                <span>ATENCIÓN</span>
+                <span />
+              </div>
+              {filtrados.map((s, i) => (
+                <article
+                  className={`mv-servicio ${detalle?.id === s.id ? 'seleccionado' : ''}`}
+                  key={s.id}
+                >
+                  <span className="mv-rank-num">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="mv-servicio-nombre">
+                    <strong>{s.servicio}</strong>
+                    <small>
+                      {s.cliente} <i /> {s.turnos} turnos
+                    </small>
+                    <div className="mv-cinco-puntos">
+                      {s.criterios.map((c, j) => (
+                        <span
+                          key={c.codigo}
+                          title={`${CORTOS[j]}: ${porcentaje(c.tasa)}`}
+                          style={{
+                            background:
+                              c.riesgo >= 60
+                                ? '#f17983'
+                                : c.riesgo >= 30
+                                  ? '#edb65a'
+                                  : '#22b69a',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className={`mv-score ${s.nivel}`}>
+                    <strong>{numero(s.puntaje)}</strong>
+                    <span>/ 100</span>
+                    <div>
+                      <i style={{ width: `${s.puntaje ?? 0}%` }} />
+                    </div>
+                  </div>
+                  <Nivel nivel={s.nivel} />
+                  <button
+                    type="button"
+                    className="mv-ver-detalle"
+                    aria-label={`Ver detalle de ${s.servicio}`}
+                    onClick={() => verDetalle(s)}
+                  >
+                    <IconoMonitor nombre="flecha" tamano={18} />
+                  </button>
+                </article>
+              ))}
+              {!cargando && !filtrados.length && (
+                <p className="mv-vacio">
+                  No hay servicios en este nivel con los filtros seleccionados.
+                </p>
+              )}
+            </section>
+            <aside className="mv-aside">
+              <section className="mv-panel mv-distribucion">
+                <div className="mv-panel-heading">
+                  <div>
+                    <span className="mv-eyebrow">PANORAMA GENERAL</span>
+                    <h2>Distribución del riesgo</h2>
+                  </div>
+                </div>
+                <div
+                  className="mv-donut"
+                  style={{
+                    background: `conic-gradient(#f17983 0 ${(niveles[0].cantidad / Math.max(1, tabla.length)) * 100}%, #edb65a ${(niveles[0].cantidad / Math.max(1, tabla.length)) * 100}% ${((niveles[0].cantidad + niveles[1].cantidad) / Math.max(1, tabla.length)) * 100}%, #22b69a 0)`,
+                  }}
+                >
+                  <div>
+                    <strong>{tabla.length}</strong>
+                    <small>SERVICIOS</small>
+                  </div>
+                </div>
+                <div className="mv-leyenda-riesgo">
+                  {niveles.map((n) => (
+                    <div key={n.nivel}>
+                      <Nivel nivel={n.nivel} />
+                      <strong>
+                        {n.cantidad}
+                        <small>
+                          {Math.round(
+                            (n.cantidad / Math.max(1, tabla.length)) * 100
+                          )}
+                          %
+                        </small>
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="mv-panel mv-alertas">
+                <div className="mv-panel-heading">
+                  <div>
+                    <span className="mv-eyebrow">SEGUIMIENTO ACTIVO</span>
+                    <h2>Incidencias en foco</h2>
+                  </div>
+                  <span className="mv-contador">
+                    {data?.resumen.pendientes ?? 0}
+                  </span>
+                </div>
+                {incidentes(data?.criticas || [], 4)}
+                {!data?.criticas.length && (
+                  <p className="mv-vacio">
+                    Sin incidencias pendientes en el periodo.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="mv-text-link"
+                  onClick={() => navigate('/incidencias')}
+                >
+                  Consultar incidencias
+                  <IconoMonitor nombre="flecha" tamano={15} />
+                </button>
+              </section>
+            </aside>
+          </div>
+          {detalle && (
+            <section className="mv-panel mv-detalle" id="detalle-servicio">
+              <div className="mv-panel-heading">
+                <div>
+                  <span className="mv-eyebrow">DETALLE DEL SERVICIO</span>
+                  <h2>{detalle.servicio}</h2>
+                  <p>
+                    {detalle.cliente} · {detalle.turnos} turnos analizados
+                  </p>
+                </div>
+                <div className="mv-detalle-acciones">
+                  <Nivel nivel={detalle.nivel} />
+                  <Button tipo="button" onClick={() => calculo(detalle)}>
+                    <IconoMonitor nombre="calculo" tamano={16} />
+                    Ver cálculo
+                  </Button>
+                  <button
+                    type="button"
+                    className="mv-cerrar-detalle"
+                    aria-label="Cerrar detalle"
+                    onClick={() => setDetalle(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="mv-detalle-criterios">
+                {detalle.criterios.map((c, i) => (
+                  <article key={c.codigo}>
+                    <span>{CORTOS[i]}</span>
+                    <strong style={{ color: COLORES[i] }}>
+                      {porcentaje(c.tasa)}
+                    </strong>
+                    <p>
+                      {c.numerador} de {c.denominador} registros
+                    </p>
+                    <small>{numero(c.aporte)} puntos de criticidad</small>
+                  </article>
+                ))}
+              </div>
+              {!!criticas.length && (
+                <>
+                  <h3 className="mv-seccion-subtitulo">
+                    Incidencias críticas de este servicio
+                  </h3>
+                  <div className="mv-incidentes-detalle">
+                    {incidentes(criticas, 6)}
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+        </>
+      )}
+      {tab === 1 && (
+        <section className="mv-panel mv-matriz">
+          <div className="mv-panel-heading">
+            <div>
+              <span className="mv-eyebrow">COMPARA EN UNA SOLA VISTA</span>
+              <h2>Matriz de evaluación</h2>
+              <p>
+                Cumplimiento por criterio, riesgo normalizado y aporte al
+                resultado.
+              </p>
+            </div>
+            <div className="mv-escala">
+              <span>
+                <i className="bajo" />
+                Bajo
+              </span>
+              <span>
+                <i className="medio" />
+                Medio
+              </span>
+              <span>
+                <i className="alto" />
+                Alto
+              </span>
+            </div>
+          </div>
+          <div className="mv-matriz-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  {criterios.map((c, i) => (
+                    <th key={c.codigo}>
+                      {CORTOS[i]}
+                      <small>
+                        {Math.round(Number(c.peso) * 100)}% del puntaje
+                      </small>
+                    </th>
+                  ))}
+                  <th>Criticidad</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {tabla.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <strong>{s.servicio}</strong>
+                      <small>{s.cliente}</small>
+                    </td>
+                    {s.criterios.map((c) => (
+                      <td key={c.codigo}>
+                        <div
+                          className={`mv-heat-cell ${c.riesgo >= 60 ? 'alto' : c.riesgo >= 30 ? 'medio' : 'bajo'}`}
+                        >
+                          <strong>{porcentaje(c.tasa)}</strong>
+                          <span>Riesgo {numero(c.riesgo)}</span>
+                          <small>{numero(c.aporte)} pts aportados</small>
+                        </div>
+                      </td>
+                    ))}
+                    <td>
+                      <div className={`mv-matriz-score ${s.nivel}`}>
+                        <strong>{numero(s.puntaje)}</strong>
+                        <Nivel nivel={s.nivel} />
+                      </div>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="mv-calculo-btn"
+                        onClick={() => calculo(s)}
+                      >
+                        <IconoMonitor nombre="calculo" tamano={16} />
+                        Ver cálculo
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {tab === 2 && (
+        <>
+          <GraficoEvolucion
+            datos={data?.evolucion || []}
+            criterios={criterios}
+          />
+          <div className="mv-evolucion-resumen">
+            {totales.map((c, i) => (
+              <article className="mv-panel" key={c.codigo}>
+                <span>
+                  <i style={{ background: COLORES[i] }} />
+                  {CORTOS[i]}
+                </span>
+                <strong>{porcentaje(c.tasa)}</strong>
+                <MiniLinea
+                  valores={(data?.evolucion || []).map(
+                    (d) => d.criterios[i].tasa
+                  )}
+                  color={COLORES[i]}
+                />
+                <small>
+                  {c.n.toLocaleString('es-PE')} de {c.d.toLocaleString('es-PE')}{' '}
+                  registros del periodo
+                </small>
+              </article>
+            ))}
+          </div>
+          <details className="mv-panel mv-tabla-diaria">
+            <summary>
+              Consultar el detalle diario de los indicadores
+              <span>{data?.evolucion.length ?? 0} días</span>
+            </summary>
+            <Table
+              datos={data?.evolucion || []}
+              columnas={[
+                { llave: 'dia', titulo: 'Fecha' },
+                { llave: 'turnos', titulo: 'Turnos' },
+                ...criterios.map((c, i) => ({
+                  llave: c.codigo,
+                  titulo: CORTOS[i],
+                  render: (d) =>
+                    `${porcentaje(d.criterios[i].tasa)} · ${d.criterios[i].numerador}/${d.criterios[i].denominador}`,
+                })),
+              ]}
+            />
+          </details>
+        </>
+      )}
+      {tab === 3 && (
+        <section className="mv-panel mv-metodo">
+          <div className="mv-panel-heading">
+            <div>
+              <span className="mv-eyebrow">TRANSPARENCIA EN CADA DECISIÓN</span>
+              <h2>El método detrás del monitor</h2>
+              <p>De los hechos operativos a una prioridad explicable.</p>
+            </div>
+            <span className="mv-version">MODELO V2</span>
+          </div>
+          <div className="mv-metodo-flujo">
+            {[
+              [
+                '01',
+                'Datos operativos',
+                'Turnos, asistencia, evidencias e incidencias.',
+                'personal',
+              ],
+              [
+                '02',
+                'Indicadores',
+                'Cantidades verificadas y tasas de cumplimiento.',
+                'tendencia',
+              ],
+              [
+                '03',
+                'Evaluación',
+                'Desviación, normalización y suma ponderada.',
+                'calculo',
+              ],
+              [
+                '04',
+                'Seguimiento',
+                'Prioridades, responsables y acciones.',
+                'escudo',
+              ],
+            ].map(([n, t, d, icono]) => (
+              <article key={n}>
+                <span>
+                  {n}
+                  <IconoMonitor nombre={icono} tamano={23} />
+                </span>
+                <h3>{t}</h3>
+                <p>{d}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mv-formula">
+            <span>EL CÁLCULO</span>
+            <p>Riesgo = mín(100, desviación ÷ umbral × 100)</p>
+            <small>
+              Aporte = riesgo × peso. Criticidad = suma de los cinco aportes.
+            </small>
+          </div>
+          <div className="mv-definiciones">
+            {[
+              [
+                'Turnos cumplidos',
+                'Turnos vencidos cumplidos, con asistencia validada y salida al término previsto, sobre los turnos vencidos.',
+              ],
+              [
+                'Personal puntual',
+                'Ingresos dentro de la tolerancia establecida, sobre las presencias verificadas.',
+              ],
+              [
+                'Cobertura efectiva',
+                'Plazas con presencia validada, sobre las plazas requeridas cuyo inicio ya ocurrió.',
+              ],
+              [
+                'Evidencia registrada',
+                'Registros presentados dentro del plazo, limitados a la obligación exigible.',
+              ],
+              [
+                'Atención en plazo',
+                'Incidencias atendidas dentro del SLA, sobre casos atendidos o con plazo vencido.',
+              ],
+            ].map(([t, d], i) => (
+              <article key={t}>
+                <span style={{ color: COLORES[i] }}>C{i + 1}</span>
+                <div>
+                  <h3>{t}</h3>
+                  <p>{d}</p>
+                </div>
+                <b>{Math.round(Number(criterios[i]?.peso || 0.2) * 100)}%</b>
+              </article>
+            ))}
+          </div>
+          <div className="mv-validacion">
+            <div>
+              <IconoMonitor nombre="escudo" tamano={23} />
+              <h3>Fuentes y validación</h3>
+              <p>
+                Los cálculos utilizan programación, asistencia validada,
+                obligaciones de evidencia y tiempos de atención. Las
+                instantáneas conservan filtros, pesos y resultados. Los
+                parámetros deben revisarse con el responsable operativo.
+              </p>
+            </div>
+            <div>
+              <h3>Cómo interpretar la prioridad</h3>
+              <p>
+                <b>0–29.9</b> Bajo control · <b>30–59.9</b> En seguimiento ·{' '}
+                <b>60–100</b> Prioridad alta.
+              </p>
+              <p>
+                Los turnos futuros no se penalizan. Sin casos aplicables, el
+                criterio no aporta riesgo. Los datos pendientes de verificación
+                no se sustituyen por porcentajes ficticios.
+              </p>
+            </div>
+          </div>
+          {['administrador', 'jefe_operaciones'].includes(usuario?.rol) && (
+            <Button
+              tipo="button"
+              variante="secundario"
+              onClick={() =>
+                abrirModal({
+                  tipo: 'formulario',
+                  tamano: 'lg',
+                  titulo: 'Configurar pesos y umbrales',
+                  contenido: (
+                    <Configuracion
+                      criterios={criterios}
+                      onGuardar={async (items) => {
+                        await actualizarPesosCriterios({ criterios: items });
+                        cerrarModal();
+                        await cargar();
+                      }}
+                    />
+                  ),
+                })
+              }
+            >
+              Configurar el modelo
+            </Button>
+          )}
+        </section>
+      )}
+      <footer className="mv-footer">
+        <div>
+          <IconoMonitor nombre="escudo" tamano={16} />
+          <span>
+            {data?.demo ? 'Datos de demostración' : 'Información operativa'}
+            <i />
+            Modelo operativo-v2
+            <i />
+            {fechaCorte}
+          </span>
+        </div>
         <Button
-          variante="primario"
-          cargando={cargando}
-          disabled={!valida}
-          onClick={() => onGuardar(pesos.map(({ id, peso }) => ({ id, peso })))}
+          tipo="button"
+          disabled={guardando || cargando || !data}
+          title="Conserva una instantánea de los filtros, criterios y puntajes para auditoría"
+          onClick={guardar}
         >
-          Guardar
+          <IconoMonitor nombre="guardar" tamano={16} />
+          {guardando ? 'Guardando…' : 'Guardar evaluación'}
         </Button>
-      </div>
+      </footer>
     </div>
   );
 }

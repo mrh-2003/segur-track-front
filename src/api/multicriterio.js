@@ -1,8 +1,16 @@
 import { get, put, post } from './cliente';
 
-export const listarCriterios                  = ()           => get('/multicriterio/criterios');
-export const actualizarPesosCriterios         = (datos)      => put('/multicriterio/criterios', datos);
-export const evaluarServicio                  = (servicioId) => post('/multicriterio/evaluar', { servicioId });
-export const resultadoMulticriterio           = ()           => get('/multicriterio/resultado');
-export const obtenerIndicadoresMulticriterio  = ()           => get('/multicriterio/indicadores');
-export const detalleServicioMcda              = (id)         => get(`/multicriterio/servicios/${id}`);
+export const listarCriterios = () => get('/multicriterio/criterios');
+export const actualizarPesosCriterios = (datos) =>
+  put('/multicriterio/criterios', datos);
+export const evaluarServicio = (servicioId, filtros = {}) =>
+  post('/multicriterio/evaluar', {
+    ...filtros,
+    ...(servicioId ? { servicioId } : {}),
+  });
+export const resultadoMulticriterio = (filtros = {}) =>
+  get('/multicriterio/resultado?' + new URLSearchParams(filtros));
+export const obtenerIndicadoresMulticriterio = () =>
+  get('/multicriterio/indicadores');
+export const detalleServicioMcda = (id, filtros = {}) =>
+  get(`/multicriterio/servicios/${id}?` + new URLSearchParams(filtros));

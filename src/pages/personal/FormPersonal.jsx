@@ -11,11 +11,13 @@ const validar = (v) => {
   if (!v.correo || !/\S+@\S+\.\S+/.test(v.correo)) e.correo = 'Correo electrónico válido requerido';
   if (!v.cargo) e.cargo = 'Seleccione un cargo';
   if (!v.sedeId) e.sedeId = 'Seleccione una sede';
+  if (!!v.horarioInicio !== !!v.horarioFin) e.horarioFin = 'Complete ambas horas';
+  if (!v.diasLaborales?.length) e.diasLaborales = 'Seleccione al menos un día';
   return e;
 };
 
 export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, cargando }) {
-  const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
+  const { valores, errores, manejarCambio, manejarBlur, establecerValor, validarTodo } = useForm(
     {
       nombres:   inicial?.nombres   || '',
       apellidos: inicial?.apellidos || '',
@@ -23,6 +25,9 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
       correo:    inicial?.correo    || '',
       cargo:     inicial?.cargo     || '',
       estado:    inicial?.estado    || 'activo',
+      horarioInicio: inicial?.horario_inicio?.slice(0,5) || '',
+      horarioFin: inicial?.horario_fin?.slice(0,5) || '',
+      diasLaborales: inicial?.dias_laborales || [0,1,2,3,4,5,6],
       sedeId:    inicial?.sede_id ? String(inicial.sede_id) : (inicial?.sedeId ? String(inicial.sedeId) : ''),
     },
     validar
@@ -31,7 +36,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
   const manejarSubmit = (e) => {
     e.preventDefault();
     if (!validarTodo()) return;
-    onGuardar({ ...valores, sedeId: parseInt(valores.sedeId, 10) });
+    onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: parseInt(valores.sedeId, 10) });
   };
 
   return (
@@ -66,6 +71,16 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
           {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
         </Select>
       </div>
+      <details className="horario-personal">
+        <summary>Horario laboral</summary>
+        <p className="tarjeta-subtitulo">Sin horas: disponibilidad flexible. Los turnos y las ausencias siempre se respetan.</p>
+        <div className="form-grilla">
+          <Input id="personal-horario-inicio" label="Desde" nombre="horarioInicio" tipo="time" valor={valores.horarioInicio} onChange={manejarCambio} />
+          <Input id="personal-horario-fin" label="Hasta" nombre="horarioFin" tipo="time" valor={valores.horarioFin} onChange={manejarCambio} error={errores.horarioFin} />
+        </div>
+        <div className="horario-dias">{['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map((dia,i) => <label key={dia}><input type="checkbox" checked={valores.diasLaborales.includes(i)} onChange={(e) => establecerValor('diasLaborales', e.target.checked ? [...valores.diasLaborales,i] : valores.diasLaborales.filter((d) => d!==i))} />{dia}</label>)}</div>
+        {errores.diasLaborales && <p role="alert">{errores.diasLaborales}</p>}
+      </details>
       <div className="form-pie">
         <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>

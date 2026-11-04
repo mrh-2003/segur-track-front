@@ -1,3 +1,4 @@
+import { turnosServicio } from '../../api/operaciones';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAsync } from '../../hooks/useAsync';
@@ -30,7 +31,11 @@ function formatearTamano(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }) {
+export default function ModalDetalleOperativo({
+  servicioId,
+  onCerrar,
+  informar,
+}) {
   const { usuario } = useAuth();
   const [pestana, setPestana] = useState('resumen');
   const [datos, setDatos] = useState(null);
@@ -57,8 +62,23 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
 
   const [mostrarFormEvidencia, setMostrarFormEvidencia] = useState(false);
   const [evTitulo, setEvTitulo] = useState('');
+  const [evTurnoId, setEvTurnoId] = useState('');
+  const [turnosEvidencia, setTurnosEvidencia] = useState([]);
+  useEffect(() => {
+    turnosServicio(servicioId)
+      .then(setTurnosEvidencia)
+      .catch((e) => informar('Error', e.message, 'error'));
+  }, [servicioId, informar]);
   const [evProtId, setEvProtId] = useState('');
-  const [evPersonalId, setEvPersonalId] = useState('');
+  const [evPersonalSeleccionado, setEvPersonalId] = useState('');
+  const evPersonalId =
+    evPersonalSeleccionado ||
+    String(
+      usuario?.personalId ||
+        datos?.servicio?.supervisor_id ||
+        datos?.personalAsignado?.[0]?.id ||
+        ''
+    );
   const [evDesc, setEvDesc] = useState('');
   const [archivosEvidencia, setArchivosEvidencia] = useState([]);
   const [arrastrandoEvidencia, setArrastrandoEvidencia] = useState(false);
@@ -101,23 +121,15 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
     };
   }, [cargar]);
 
-  useEffect(() => {
-    if (datos) {
-      if (usuario?.personalId) {
-        setEvPersonalId(String(usuario.personalId));
-      } else if (datos.servicio?.supervisor_id) {
-        setEvPersonalId(String(datos.servicio.supervisor_id));
-      } else if (datos.personalAsignado?.length > 0) {
-        setEvPersonalId(String(datos.personalAsignado[0].id));
-      }
-    }
-  }, [datos, usuario]);
-
   const agregarArchivosEvidencia = (files) => {
     setErrorCargaEvidencia('');
-    const validos = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    const validos = Array.from(files).filter((file) =>
+      file.type.startsWith('image/')
+    );
     if (validos.length === 0) {
-      setErrorCargaEvidencia('Solo se permiten archivos de imagen (JPG, PNG, WEBP, etc.)');
+      setErrorCargaEvidencia(
+        'Solo se permiten archivos de imagen (JPG, PNG, WEBP, etc.)'
+      );
       return;
     }
     const nuevos = validos.map((file) => ({
@@ -141,13 +153,21 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const handleAsignarPersonal = async (e) => {
     e.preventDefault();
     if (!personalAAsignarId) {
-      informar('Seleccione personal', 'Debe seleccionar un personal operativo para asignar', 'advertencia');
+      informar(
+        'Seleccione personal',
+        'Debe seleccionar un personal operativo para asignar',
+        'advertencia'
+      );
       return;
     }
     await ejecutar(async () => {
       try {
         await asignarPersonalServicio(servicioId, Number(personalAAsignarId));
-        informar('Personal asignado', 'El personal fue asignado exitosamente al servicio', 'exito');
+        informar(
+          'Personal asignado',
+          'El personal fue asignado exitosamente al servicio',
+          'exito'
+        );
         setPersonalAAsignarId('');
         setMostrarAsignarPersonal(false);
         await cargar();
@@ -161,7 +181,11 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
     await ejecutar(async () => {
       try {
         await desasignarPersonalServicio(servicioId, asignacionId);
-        informar('Asignación retirada', `Se retiró a ${nombrePersonal} del servicio`, 'exito');
+        informar(
+          'Asignación retirada',
+          `Se retiró a ${nombrePersonal} del servicio`,
+          'exito'
+        );
         await cargar();
       } catch (err) {
         informar('Error', err.message, 'error');
@@ -172,7 +196,11 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const handleCrearRequerimiento = async (e) => {
     e.preventDefault();
     if (!reqTitulo.trim()) {
-      informar('Dato requerido', 'El título del requerimiento es obligatorio', 'advertencia');
+      informar(
+        'Dato requerido',
+        'El título del requerimiento es obligatorio',
+        'advertencia'
+      );
       return;
     }
     await ejecutar(async () => {
@@ -208,12 +236,18 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const handleAsociarProtocolo = async (e) => {
     e.preventDefault();
     if (!protSeleccionadoId) {
-      informar('Selección requerida', 'Seleccione un protocolo para asociar', 'advertencia');
+      informar(
+        'Selección requerida',
+        'Seleccione un protocolo para asociar',
+        'advertencia'
+      );
       return;
     }
     await ejecutar(async () => {
       try {
-        await asociarProtocolosServicio(servicioId, { protocolos: [protSeleccionadoId] });
+        await asociarProtocolosServicio(servicioId, {
+          protocolos: [protSeleccionadoId],
+        });
         setMostrarAsociarProt(false);
         setProtSeleccionadoId('');
         await cargar();
@@ -226,8 +260,16 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
 
   const handleCrearYAsociarProtocolo = async (e) => {
     e.preventDefault();
-    if (!nuevoProtCodigo.trim() || !nuevoProtNombre.trim() || !nuevoProtActividades.trim()) {
-      informar('Datos incompletos', 'Complete código, nombre y actividades del protocolo', 'advertencia');
+    if (
+      !nuevoProtCodigo.trim() ||
+      !nuevoProtNombre.trim() ||
+      !nuevoProtActividades.trim()
+    ) {
+      informar(
+        'Datos incompletos',
+        'Complete código, nombre y actividades del protocolo',
+        'advertencia'
+      );
       return;
     }
     await ejecutar(async () => {
@@ -245,7 +287,11 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         setNuevoProtDesc('');
         setNuevoProtActividades('');
         await cargar();
-        informar('Éxito', 'Protocolo registrado y asociado al servicio', 'exito');
+        informar(
+          'Éxito',
+          'Protocolo registrado y asociado al servicio',
+          'exito'
+        );
       } catch (err) {
         informar('Error', err.message, 'error');
       }
@@ -267,20 +313,32 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
   const handleRegistrarEvidencia = async (e) => {
     e.preventDefault();
     if (!evTitulo.trim()) {
-      informar('Dato requerido', 'El título de la evidencia es obligatorio', 'advertencia');
+      informar(
+        'Dato requerido',
+        'El título de la evidencia es obligatorio',
+        'advertencia'
+      );
       return;
     }
     if (archivosEvidencia.length === 0) {
-      setErrorCargaEvidencia('Debe seleccionar o arrastrar al menos una imagen de evidencia');
+      setErrorCargaEvidencia(
+        'Debe seleccionar o arrastrar al menos una imagen de evidencia'
+      );
       return;
     }
 
     const personalElegido = evPersonalId
       ? parseInt(evPersonalId, 10)
-      : (usuario?.personalId || datos?.servicio?.supervisor_id || (datos?.personalAsignado[0]?.id ?? null));
+      : usuario?.personalId ||
+        datos?.servicio?.supervisor_id ||
+        (datos?.personalAsignado[0]?.id ?? null);
 
     if (!personalElegido) {
-      informar('Personal requerido', 'Debe seleccionar el personal operativo responsable de la evidencia', 'advertencia');
+      informar(
+        'Personal requerido',
+        'Debe seleccionar el personal operativo responsable de la evidencia',
+        'advertencia'
+      );
       return;
     }
 
@@ -312,6 +370,7 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
 
           await crearEvidencia({
             servicioId,
+            turnoId: evTurnoId ? Number(evTurnoId) : null,
             protocoloId: evProtId ? parseInt(evProtId, 10) : null,
             personalId: personalElegido,
             titulo: tituloFinal,
@@ -329,7 +388,11 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         setEvProtId('');
         setEvDesc('');
         await cargar();
-        informar('Éxito', `${urlsSubidas.length} evidencia(s) registrada(s) correctamente`, 'exito');
+        informar(
+          'Éxito',
+          `${urlsSubidas.length} evidencia(s) registrada(s) correctamente`,
+          'exito'
+        );
       } catch (err) {
         informar('Error', err.message, 'error');
       }
@@ -363,8 +426,18 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
     );
   }
 
-  const { servicio, personalAsignado, protocolos, requerimientos, evidencias, incidencias } = datos;
-  const esSupervisorOAdmin = usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones' || usuario?.rol === 'supervisor';
+  const {
+    servicio,
+    personalAsignado,
+    protocolos,
+    requerimientos,
+    evidencias,
+    incidencias,
+  } = datos;
+  const esSupervisorOAdmin =
+    usuario?.rol === 'administrador' ||
+    usuario?.rol === 'jefe_operaciones' ||
+    usuario?.rol === 'supervisor';
 
   const evidenciasFiltradas = filtroEstadoEv
     ? evidencias.filter((ev) => ev.estado_revision === filtroEstadoEv)
@@ -391,7 +464,8 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         <div>
           <h2 className="detalle-op-nombre">{servicio.nombre}</h2>
           <p className="detalle-op-sub">
-            {servicio.cliente} • Sede {servicio.sede} • Supervisor: {servicio.supervisor}
+            {servicio.cliente} • Sede {servicio.sede} • Supervisor:{' '}
+            {servicio.supervisor}
           </p>
         </div>
         <Badge valor={servicio.estado} />
@@ -441,37 +515,67 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             <div className="panel-info-grilla">
               <div className="info-bloque">
                 <span className="info-rotulo">Horario de servicio</span>
-                <span className="info-dato">{servicio.hora_inicio?.slice(0, 5)} - {servicio.hora_fin?.slice(0, 5)}</span>
+                <span className="info-dato">
+                  {servicio.hora_inicio?.slice(0, 5)} -{' '}
+                  {servicio.hora_fin?.slice(0, 5)}
+                </span>
               </div>
               <div className="info-bloque">
                 <span className="info-rotulo">Fecha de inicio</span>
-                <span className="info-dato">{formatearFecha(servicio.fecha_inicio)}</span>
+                <span className="info-dato">
+                  {formatearFecha(servicio.fecha_inicio)}
+                </span>
               </div>
               <div className="info-bloque">
                 <span className="info-rotulo">Fecha de finalización</span>
-                <span className="info-dato">{servicio.fecha_fin ? formatearFecha(servicio.fecha_fin) : 'Indefinida'}</span>
+                <span className="info-dato">
+                  {servicio.fecha_fin
+                    ? formatearFecha(servicio.fecha_fin)
+                    : 'Indefinida'}
+                </span>
               </div>
               <div className="info-bloque">
                 <span className="info-rotulo">Total de agentes asignados</span>
-                <span className="info-dato">{personalAsignado.length} personas</span>
+                <span className="info-dato">
+                  {personalAsignado.length} personas
+                </span>
               </div>
             </div>
 
-            <div className="panel-acciones-seccion" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12 }}>
-              <h4 className="seccion-subtitulo" style={{ margin: 0 }}>Personal Operativo Asignado ({personalAsignado.length})</h4>
+            <div
+              className="panel-acciones-seccion"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 20,
+                marginBottom: 12,
+              }}
+            >
+              <h4 className="seccion-subtitulo" style={{ margin: 0 }}>
+                Personal Operativo Asignado ({personalAsignado.length})
+              </h4>
               {esSupervisorOAdmin && (
                 <Button
                   variante="primario"
                   tamano="sm"
-                  onClick={() => setMostrarAsignarPersonal(!mostrarAsignarPersonal)}
+                  onClick={() =>
+                    setMostrarAsignarPersonal(!mostrarAsignarPersonal)
+                  }
                 >
-                  {mostrarAsignarPersonal ? 'Cerrar asignación' : '+ Asignar personal'}
+                  {mostrarAsignarPersonal
+                    ? 'Cerrar asignación'
+                    : '+ Asignar personal'}
                 </Button>
               )}
             </div>
 
             {mostrarAsignarPersonal && (
-              <form onSubmit={handleAsignarPersonal} className="formulario-subpanel" style={{ marginBottom: 16 }}>
+              <form
+                onSubmit={handleAsignarPersonal}
+                className="formulario-subpanel"
+                style={{ marginBottom: 16 }}
+              >
                 <Select
                   id="select-personal-asignar"
                   label="Seleccionar personal operativo"
@@ -482,18 +586,41 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                 >
                   <option value="">-- Seleccionar personal activo --</option>
                   {todosPersonal
-                    .filter((pers) => !personalAsignado.some((pa) => pa.id === pers.id))
+                    .filter(
+                      (pers) =>
+                        !personalAsignado.some((pa) => pa.id === pers.id)
+                    )
                     .map((pers) => (
                       <option key={pers.id} value={pers.id}>
-                        {pers.nombres} {pers.apellidos} ({pers.cargo}) - DNI: {pers.documento}
+                        {pers.nombres} {pers.apellidos} ({pers.cargo}) - DNI:{' '}
+                        {pers.documento}
                       </option>
                     ))}
                 </Select>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsignarPersonal(false)} disabled={cargandoAccion}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 12,
+                  }}
+                >
+                  <Button
+                    tipo="button"
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setMostrarAsignarPersonal(false)}
+                    disabled={cargandoAccion}
+                  >
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion} disabled={!personalAAsignarId}>
+                  <Button
+                    tipo="submit"
+                    variante="primario"
+                    tamano="sm"
+                    cargando={cargandoAccion}
+                    disabled={!personalAAsignarId}
+                  >
                     Confirmar asignación
                   </Button>
                 </div>
@@ -521,19 +648,45 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             ) : (
               <div className="lista-cards-personal">
                 {personalAsignadoFiltrado.map((p) => (
-                  <div key={p.id} className="tarjeta-persona-asignada" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    key={p.id}
+                    className="tarjeta-persona-asignada"
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <div>
-                      <strong>{p.nombres} {p.apellidos}</strong>
-                      <span className="persona-doc">DNI: {p.documento} • {p.cargo}</span>
+                      <strong>
+                        {p.nombres} {p.apellidos}
+                      </strong>
+                      <span className="persona-doc">
+                        DNI: {p.documento} • {p.cargo}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+                    >
                       <Badge valor={p.estado} />
                       {esSupervisorOAdmin && (
                         <button
                           type="button"
                           className="btn-link-peligro"
-                          style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: 'var(--tam-xs)', fontWeight: 600 }}
-                          onClick={() => handleDesasignarPersonal(p.asignacion_id, `${p.nombres} ${p.apellidos}`)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--color-error)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--tam-xs)',
+                            fontWeight: 600,
+                          }}
+                          onClick={() =>
+                            handleDesasignarPersonal(
+                              p.asignacion_id,
+                              `${p.nombres} ${p.apellidos}`
+                            )
+                          }
                           title="Retirar asignación"
                           disabled={cargandoAccion}
                         >
@@ -551,20 +704,27 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         {pestana === 'requerimientos' && (
           <div className="detalle-panel-contenido">
             <div className="panel-acciones-seccion">
-              <h4 className="seccion-subtitulo">Requerimientos y Condiciones del Servicio</h4>
+              <h4 className="seccion-subtitulo">
+                Requerimientos y Condiciones del Servicio
+              </h4>
               {esSupervisorOAdmin && (
                 <Button
                   variante="primario"
                   tamano="sm"
                   onClick={() => setMostrarFormReq(!mostrarFormReq)}
                 >
-                  {mostrarFormReq ? 'Cerrar formulario' : '+ Agregar requerimiento'}
+                  {mostrarFormReq
+                    ? 'Cerrar formulario'
+                    : '+ Agregar requerimiento'}
                 </Button>
               )}
             </div>
 
             {mostrarFormReq && (
-              <form onSubmit={handleCrearRequerimiento} className="formulario-subpanel">
+              <form
+                onSubmit={handleCrearRequerimiento}
+                className="formulario-subpanel"
+              >
                 <Input
                   id="req-titulo"
                   label="Título del requerimiento"
@@ -593,11 +753,29 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   <option value="media">Media</option>
                   <option value="baja">Baja</option>
                 </Select>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormReq(false)} disabled={cargandoAccion}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 12,
+                  }}
+                >
+                  <Button
+                    tipo="button"
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setMostrarFormReq(false)}
+                    disabled={cargandoAccion}
+                  >
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
+                  <Button
+                    tipo="submit"
+                    variante="primario"
+                    tamano="sm"
+                    cargando={cargandoAccion}
+                  >
                     Guardar requerimiento
                   </Button>
                 </div>
@@ -605,16 +783,23 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             )}
 
             {requerimientos.length === 0 ? (
-              <p className="vacio-mensaje">El servicio no cuenta con requerimientos específicos registrados.</p>
+              <p className="vacio-mensaje">
+                El servicio no cuenta con requerimientos específicos
+                registrados.
+              </p>
             ) : (
               <div className="lista-requerimientos">
                 {requerimientos.map((r) => (
                   <div key={r.id} className="tarjeta-requerimiento">
                     <div className="req-cabecera">
                       <strong>{r.titulo}</strong>
-                      <span className={`req-tag tag-${r.prioridad}`}>Prioridad {r.prioridad}</span>
+                      <span className={`req-tag tag-${r.prioridad}`}>
+                        Prioridad {r.prioridad}
+                      </span>
                     </div>
-                    {r.descripcion && <p className="req-cuerpo">{r.descripcion}</p>}
+                    {r.descripcion && (
+                      <p className="req-cuerpo">{r.descripcion}</p>
+                    )}
                     {esSupervisorOAdmin && (
                       <div className="req-pie">
                         <button
@@ -637,7 +822,9 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         {pestana === 'protocolos' && (
           <div className="detalle-panel-contenido">
             <div className="panel-acciones-seccion">
-              <h4 className="seccion-subtitulo">Protocolos Operativos Aplicables</h4>
+              <h4 className="seccion-subtitulo">
+                Protocolos Operativos Aplicables
+              </h4>
               {esSupervisorOAdmin && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <Button
@@ -665,7 +852,10 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             </div>
 
             {mostrarAsociarProt && (
-              <form onSubmit={handleAsociarProtocolo} className="formulario-subpanel">
+              <form
+                onSubmit={handleAsociarProtocolo}
+                className="formulario-subpanel"
+              >
                 <Select
                   id="prot-asoc"
                   label="Seleccione protocolo disponible"
@@ -681,11 +871,29 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                     </option>
                   ))}
                 </Select>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarAsociarProt(false)} disabled={cargandoAccion}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 12,
+                  }}
+                >
+                  <Button
+                    tipo="button"
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setMostrarAsociarProt(false)}
+                    disabled={cargandoAccion}
+                  >
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
+                  <Button
+                    tipo="submit"
+                    variante="primario"
+                    tamano="sm"
+                    cargando={cargandoAccion}
+                  >
                     Vincular al servicio
                   </Button>
                 </div>
@@ -693,7 +901,10 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             )}
 
             {mostrarCrearProt && (
-              <form onSubmit={handleCrearYAsociarProtocolo} className="formulario-subpanel">
+              <form
+                onSubmit={handleCrearYAsociarProtocolo}
+                className="formulario-subpanel"
+              >
                 <Input
                   id="nuevo-prot-cod"
                   label="Código del protocolo"
@@ -729,11 +940,29 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   placeholder="Pasos y directivas obligatorias para el personal"
                   requerido
                 />
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarCrearProt(false)} disabled={cargandoAccion}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 12,
+                  }}
+                >
+                  <Button
+                    tipo="button"
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setMostrarCrearProt(false)}
+                    disabled={cargandoAccion}
+                  >
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion}>
+                  <Button
+                    tipo="submit"
+                    variante="primario"
+                    tamano="sm"
+                    cargando={cargandoAccion}
+                  >
                     Registrar y vincular
                   </Button>
                 </div>
@@ -741,7 +970,9 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             )}
 
             {protocolos.length === 0 ? (
-              <p className="vacio-mensaje">El servicio no cuenta con protocolos asociados actualmente.</p>
+              <p className="vacio-mensaje">
+                El servicio no cuenta con protocolos asociados actualmente.
+              </p>
             ) : (
               <div className="lista-protocolos">
                 {protocolos.map((p) => (
@@ -762,9 +993,13 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                         </button>
                       )}
                     </div>
-                    {p.descripcion && <p className="protocolo-desc">{p.descripcion}</p>}
+                    {p.descripcion && (
+                      <p className="protocolo-desc">{p.descripcion}</p>
+                    )}
                     <div className="protocolo-actividades-caja">
-                      <span className="actividades-rotulo">Actividades y lineamientos:</span>
+                      <span className="actividades-rotulo">
+                        Actividades y lineamientos:
+                      </span>
                       <p className="actividades-texto">{p.actividades}</p>
                     </div>
                   </div>
@@ -777,8 +1012,17 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
         {pestana === 'evidencias' && (
           <div className="detalle-panel-contenido">
             <div className="panel-acciones-seccion">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <h4 className="seccion-subtitulo" style={{ margin: 0 }}>Evidencias del Servicio</h4>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <h4 className="seccion-subtitulo" style={{ margin: 0 }}>
+                  Evidencias del Servicio
+                </h4>
                 <div style={{ width: 180 }}>
                   <Select
                     id="filtro-ev-estado"
@@ -798,12 +1042,40 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                 tamano="sm"
                 onClick={() => setMostrarFormEvidencia(!mostrarFormEvidencia)}
               >
-                {mostrarFormEvidencia ? 'Cerrar formulario' : '+ Registrar evidencia'}
+                {mostrarFormEvidencia
+                  ? 'Cerrar formulario'
+                  : '+ Registrar evidencia'}
               </Button>
             </div>
 
             {mostrarFormEvidencia && (
-              <form onSubmit={handleRegistrarEvidencia} className="formulario-subpanel">
+              <form
+                onSubmit={handleRegistrarEvidencia}
+                className="formulario-subpanel"
+              >
+                <Select
+                  id="ev-turno"
+                  label="Turno asociado (para evaluar registro)"
+                  nombre="evTurnoId"
+                  valor={evTurnoId}
+                  onChange={(e) => {
+                    setEvTurnoId(e.target.value);
+                    const t = turnosEvidencia.find(
+                      (x) => String(x.id) === e.target.value
+                    );
+                    if (t?.personal_id) setEvPersonalId(String(t.personal_id));
+                  }}
+                  placeholder="Sin vínculo a turno"
+                >
+                  {turnosEvidencia
+                    .filter((t) => t.personal_id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.fecha} {t.hora_inicio.slice(0, 5)} ·{' '}
+                        {t.puesto || 'Turno'} #{t.id}
+                      </option>
+                    ))}
+                </Select>
                 <Input
                   id="ev-titulo"
                   label="Título de la evidencia"
@@ -821,14 +1093,18 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   onChange={(e) => setEvPersonalId(e.target.value)}
                   requerido
                 >
-                  <option value="">-- Seleccionar personal responsable --</option>
+                  <option value="">
+                    -- Seleccionar personal responsable --
+                  </option>
                   {personalAsignado.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.nombres} {p.apellidos} ({p.cargo}) [Asignado]
                     </option>
                   ))}
                   {todosPersonal
-                    .filter((p) => !personalAsignado.some((pa) => pa.id === p.id))
+                    .filter(
+                      (p) => !personalAsignado.some((pa) => pa.id === p.id)
+                    )
                     .map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nombres} {p.apellidos} ({p.cargo})
@@ -864,12 +1140,19 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   </label>
                   <div
                     className={`evidencias-dropzone ${arrastrandoEvidencia ? 'dropzone-activa' : ''}`}
-                    onDragOver={(e) => { e.preventDefault(); setArrastrandoEvidencia(true); }}
-                    onDragLeave={(e) => { e.preventDefault(); setArrastrandoEvidencia(false); }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setArrastrandoEvidencia(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setArrastrandoEvidencia(false);
+                    }}
                     onDrop={(e) => {
                       e.preventDefault();
                       setArrastrandoEvidencia(false);
-                      if (e.dataTransfer?.files?.length > 0) agregarArchivosEvidencia(e.dataTransfer.files);
+                      if (e.dataTransfer?.files?.length > 0)
+                        agregarArchivosEvidencia(e.dataTransfer.files);
                     }}
                     onClick={() => inputEvidenciaRef.current?.click()}
                   >
@@ -880,17 +1163,22 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                       accept="image/*"
                       style={{ display: 'none' }}
                       onChange={(e) => {
-                        if (e.target?.files?.length > 0) agregarArchivosEvidencia(e.target.files);
+                        if (e.target?.files?.length > 0)
+                          agregarArchivosEvidencia(e.target.files);
                       }}
                     />
                     <div className="dropzone-icono">
                       <Icono nombre="subir" tamano={28} />
                     </div>
                     <p className="dropzone-texto-principal">
-                      Arrastra y suelta imágenes aquí, o <span className="dropzone-texto-enlace">haz clic para explorar</span>
+                      Arrastra y suelta imágenes aquí, o{' '}
+                      <span className="dropzone-texto-enlace">
+                        haz clic para explorar
+                      </span>
                     </p>
                     <span className="dropzone-texto-secundario">
-                      Formatos soportados: JPG, PNG, WEBP (puede seleccionar una o varias imágenes)
+                      Formatos soportados: JPG, PNG, WEBP (puede seleccionar una
+                      o varias imágenes)
                     </span>
                   </div>
 
@@ -905,10 +1193,21 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                     <div className="archivos-previews-grilla">
                       {archivosEvidencia.map((item) => (
                         <div key={item.id} className="archivo-preview-item">
-                          <img src={item.previewUrl} alt={item.nombre} className="archivo-preview-miniatura" />
+                          <img
+                            src={item.previewUrl}
+                            alt={item.nombre}
+                            className="archivo-preview-miniatura"
+                          />
                           <div className="archivo-preview-info">
-                            <span className="archivo-preview-nombre" title={item.nombre}>{item.nombre}</span>
-                            <span className="archivo-preview-tamano">{formatearTamano(item.tamano)}</span>
+                            <span
+                              className="archivo-preview-nombre"
+                              title={item.nombre}
+                            >
+                              {item.nombre}
+                            </span>
+                            <span className="archivo-preview-tamano">
+                              {formatearTamano(item.tamano)}
+                            </span>
                           </div>
                           <button
                             type="button"
@@ -925,11 +1224,30 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <Button tipo="button" variante="secundario" tamano="sm" onClick={() => setMostrarFormEvidencia(false)} disabled={cargandoAccion}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    justifyContent: 'flex-end',
+                    marginTop: 12,
+                  }}
+                >
+                  <Button
+                    tipo="button"
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setMostrarFormEvidencia(false)}
+                    disabled={cargandoAccion}
+                  >
                     Cancelar
                   </Button>
-                  <Button tipo="submit" variante="primario" tamano="sm" cargando={cargandoAccion} disabled={archivosEvidencia.length === 0}>
+                  <Button
+                    tipo="submit"
+                    variante="primario"
+                    tamano="sm"
+                    cargando={cargandoAccion}
+                    disabled={archivosEvidencia.length === 0}
+                  >
                     Guardar evidencia
                   </Button>
                 </div>
@@ -937,7 +1255,10 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             )}
 
             {evidenciasFiltradas.length === 0 ? (
-              <p className="vacio-mensaje">No existen evidencias registradas para el servicio con el filtro seleccionado.</p>
+              <p className="vacio-mensaje">
+                No existen evidencias registradas para el servicio con el filtro
+                seleccionado.
+              </p>
             ) : (
               <div className="lista-evidencias">
                 {evidenciasFiltradas.map((ev) => (
@@ -947,16 +1268,29 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                         <strong>{ev.titulo}</strong>
                         {ev.protocolo && (
                           <span className="ev-protocolo-chip">
-                            {ev.protocolo_codigo ? `[${ev.protocolo_codigo}] ` : ''}{ev.protocolo}
+                            {ev.protocolo_codigo
+                              ? `[${ev.protocolo_codigo}] `
+                              : ''}
+                            {ev.protocolo}
                           </span>
                         )}
                       </div>
                       <Badge valor={ev.estado_revision} />
                     </div>
-                    {ev.descripcion && <p className="ev-desc">{ev.descripcion}</p>}
+                    {ev.descripcion && (
+                      <p className="ev-desc">{ev.descripcion}</p>
+                    )}
                     {ev.archivo_url && (
-                      <div className="ev-galeria-item" onClick={() => setFotoModal(ev.archivo_url)} title="Clic para ver foto ampliada">
-                        <img src={ev.archivo_url} alt={ev.titulo} className="ev-miniatura-img" />
+                      <div
+                        className="ev-galeria-item"
+                        onClick={() => setFotoModal(ev.archivo_url)}
+                        title="Clic para ver foto ampliada"
+                      >
+                        <img
+                          src={ev.archivo_url}
+                          alt={ev.titulo}
+                          className="ev-miniatura-img"
+                        />
                         <div className="ev-miniatura-overlay">
                           <Icono nombre="zoom" tamano={18} color="#fff" />
                           <span>Ver foto</span>
@@ -984,7 +1318,8 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                     </div>
                     {ev.observacion && (
                       <div className="ev-observacion-caja">
-                        <strong>Observación de revisión:</strong> {ev.observacion}
+                        <strong>Observación de revisión:</strong>{' '}
+                        {ev.observacion}
                       </div>
                     )}
                   </div>
@@ -996,9 +1331,13 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
 
         {pestana === 'incidencias' && (
           <div className="detalle-panel-contenido">
-            <h4 className="seccion-subtitulo">Incidencias Reportadas en este Servicio</h4>
+            <h4 className="seccion-subtitulo">
+              Incidencias Reportadas en este Servicio
+            </h4>
             {incidencias.length === 0 ? (
-              <p className="vacio-mensaje">No hay incidencias reportadas en este servicio.</p>
+              <p className="vacio-mensaje">
+                No hay incidencias reportadas en este servicio.
+              </p>
             ) : (
               <div className="lista-incidencias-servicio">
                 {incidencias.map((inc) => (
@@ -1016,7 +1355,8 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                       </p>
                     )}
                     <span className="inc-srv-fecha">
-                      Reportado: {inc.fecha_registro} • Por: {inc.personal_registra}
+                      Reportado: {inc.fecha_registro} • Por:{' '}
+                      {inc.personal_registra}
                     </span>
                   </div>
                 ))}
@@ -1033,7 +1373,10 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
       </div>
 
       {evidenciaARevisar && (
-        <div className="modal-overlay modal-revision-overlay" onClick={() => setEvidenciaARevisar(null)}>
+        <div
+          className="modal-overlay modal-revision-overlay"
+          onClick={() => setEvidenciaARevisar(null)}
+        >
           <div
             className="modal-contenedor modal-formulario"
             role="dialog"
@@ -1042,7 +1385,9 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-encabezado">
-              <h3 id="modal-rev-titulo" className="modal-titulo">Revisar evidencia</h3>
+              <h3 id="modal-rev-titulo" className="modal-titulo">
+                Revisar evidencia
+              </h3>
               <button
                 type="button"
                 className="modal-cerrar"
@@ -1054,20 +1399,39 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
               </button>
             </div>
 
-            <form onSubmit={handleGuardarRevision} className="modal-cuerpo" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form
+              onSubmit={handleGuardarRevision}
+              className="modal-cuerpo"
+              style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+            >
               <div>
-                <p style={{ margin: '0 0 4px 0', fontSize: 'var(--tam-base)', fontWeight: 700, color: 'var(--color-texto-principal)' }}>
+                <p
+                  style={{
+                    margin: '0 0 4px 0',
+                    fontSize: 'var(--tam-base)',
+                    fontWeight: 700,
+                    color: 'var(--color-texto-principal)',
+                  }}
+                >
                   {evidenciaARevisar.titulo}
                 </p>
-                <span style={{ fontSize: 'var(--tam-xs)', color: 'var(--color-texto-secundario)' }}>
-                  Registrado por {evidenciaARevisar.personal} • {evidenciaARevisar.fecha_registro}
+                <span
+                  style={{
+                    fontSize: 'var(--tam-xs)',
+                    color: 'var(--color-texto-secundario)',
+                  }}
+                >
+                  Registrado por {evidenciaARevisar.personal} •{' '}
+                  {evidenciaARevisar.fecha_registro}
                 </span>
               </div>
 
               {evidenciaARevisar.protocolo && (
                 <div>
                   <span className="ev-protocolo-chip" style={{ margin: 0 }}>
-                    {evidenciaARevisar.protocolo_codigo ? `[${evidenciaARevisar.protocolo_codigo}] ` : ''}
+                    {evidenciaARevisar.protocolo_codigo
+                      ? `[${evidenciaARevisar.protocolo_codigo}] `
+                      : ''}
                     {evidenciaARevisar.protocolo}
                   </span>
                 </div>
@@ -1084,7 +1448,14 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
               )}
 
               {evidenciaARevisar.descripcion && (
-                <p style={{ margin: 0, fontSize: 'var(--tam-sm)', color: 'var(--color-texto-secundario)', lineHeight: 1.4 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 'var(--tam-sm)',
+                    color: 'var(--color-texto-secundario)',
+                    lineHeight: 1.4,
+                  }}
+                >
                   {evidenciaARevisar.descripcion}
                 </p>
               )}
@@ -1116,7 +1487,14 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  justifyContent: 'flex-end',
+                  marginTop: 8,
+                }}
+              >
                 <Button
                   type="button"
                   variante="secundario"
@@ -1139,9 +1517,19 @@ export default function ModalDetalleOperativo({ servicioId, onCerrar, informar }
       )}
 
       {fotoModal && (
-        <div className="evidencia-lightbox-overlay" onClick={() => setFotoModal(null)}>
-          <div className="evidencia-lightbox-contenido" onClick={(e) => e.stopPropagation()}>
-            <img src={fotoModal} alt="Evidencia en pantalla completa" className="evidencia-lightbox-img" />
+        <div
+          className="evidencia-lightbox-overlay"
+          onClick={() => setFotoModal(null)}
+        >
+          <div
+            className="evidencia-lightbox-contenido"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={fotoModal}
+              alt="Evidencia en pantalla completa"
+              className="evidencia-lightbox-img"
+            />
             <button
               type="button"
               className="evidencia-lightbox-cerrar"

@@ -1,396 +1,381 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
-import { useAsync } from '../../hooks/useAsync';
 import { useAuth } from '../../hooks/useAuth';
 import {
-  listarTurnos, resumenTurnos, alertasTurnos,
-  crearTurno, confirmarTurno, cumplirTurno, rechazarTurno, reasignarTurno, eliminarTurno, listarSedesTurnos,
+  listarTurnos,
+  crearTurno,
+  confirmarTurno,
+  cumplirTurno,
+  rechazarTurno,
+  reasignarTurno,
+  eliminarTurno,
 } from '../../api/turnos';
-import { listarPersonal } from '../../api/personal';
-import { listarServicios } from '../../api/servicios';
+import { catalogosOperativos } from '../../api/operaciones';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Button } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Select';
-import { Icono } from '../../components/ui/Icono';
-import { formatearFecha } from '../../utils/fechas';
+import { Table } from '../../components/ui/Table';
+import { Badge } from '../../components/ui/Badge';
 import FormTurno from './FormTurno';
 import ModalDetalleTurno from './ModalDetalleTurno';
 import './TurnosPage.css';
-
-const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-function formatearLocalYmd(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function parsearLocalYmd(str) {
-  const partes = String(str).slice(0, 10).split('-');
-  return new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
-}
-
-function obtenerSemana(fechaBaseStr) {
-  const base = parsearLocalYmd(fechaBaseStr);
-  const diaSemana = base.getDay();
-  const diff = diaSemana === 0 ? -6 : 1 - diaSemana;
-  const inicio = new Date(base.getFullYear(), base.getMonth(), base.getDate() + diff);
-  const fin = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
-
-  const dias = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
-    dias.push(formatearLocalYmd(d));
-  }
-
-  return {
-    desde: formatearLocalYmd(inicio),
-    hasta: formatearLocalYmd(fin),
-    dias,
-  };
-}
-
+const ymd = (d) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+const desplazar = (fecha, n) =>
+  ymd(new Date(new Date(fecha + 'T12:00:00-05:00').getTime() + n * 86400000));
 export default function TurnosPage() {
-  const [semanaBase, setSemanaBase] = useState(() => formatearLocalYmd(new Date()));
-  const [sedeId, setSedeId] = useState('');
-  const [turnos, setTurnos] = useState([]);
-  const [resumen, setResumen] = useState(null);
-  const [alertas, setAlertas] = useState(null);
-  const [sedes, setSedes] = useState([]);
-  const [personal, setPersonal] = useState([]);
-  const [servicios, setServicios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const { abrirModal, cerrarModal, confirmar, informar } = useModal();
-  const { cargando: cargandoAccion, ejecutar } = useAsync();
-  const { usuario } = useAuth();
-  const location = useLocation();
-
-  const esOperador = usuario?.rol === 'operador';
-  const puedeAsignar = !esOperador;
-
-  const semana = obtenerSemana(semanaBase);
-
+  const [desde, setDesde] = useState(() => ymd(new Date())),
+    [hasta, setHasta] = useState(() => desplazar(ymd(new Date()), 6)),
+    [vista, setVista] = useState('calendario'),
+    [estado, setEstado] = useState(''),
+    [sede, setSede] = useState(''),
+    [turnos, setTurnos] = useState([]),
+    [catalogo, setCatalogo] = useState({
+      personal: [],
+      sedes: [],
+      servicios: [],
+    }),
+    [servicios, setServicios] = useState([]),
+    [error, setError] = useState(''),
+    [cargando, setCargando] = useState(true);
+  const { usuario } = useAuth(),
+    { abrirModal, cerrarModal, informar, confirmar } = useModal(),
+    location = useLocation();
+  const gestor = ['administrador', 'jefe_operaciones', 'supervisor'].includes(
+    usuario?.rol
+  );
   const cargar = useCallback(async () => {
+    setCargando(true);
     try {
-      const params = { desde: semana.desde, hasta: semana.hasta };
-      if (sedeId) params.sedeId = sedeId;
-
-      const [listaTurnos, res, alerts, listaSedes, listaPersonal, listaServicios] = await Promise.all([
-        listarTurnos(params),
-        resumenTurnos(),
-        alertasTurnos(),
-        listarSedesTurnos(),
-        listarPersonal({ estado: 'activo', limite: 100 }),
-        listarServicios({ limite: 100 }),
-      ]);
-      setTurnos(listaTurnos || []);
-      setResumen(res);
-      setAlertas(alerts);
-      setSedes(listaSedes || []);
-      setPersonal(listaPersonal || []);
-      setServicios(listaServicios || []);
+      const t = await listarTurnos({
+        desde,
+        hasta,
+        ...(sede ? { sedeId: sede } : {}),
+      });
+      setTurnos(t);
+      setError('');
+    } catch (e) {
+      setError(e.message);
     } finally {
       setCargando(false);
     }
-  }, [semana.desde, semana.hasta, sedeId]);
-
+  }, [desde, hasta, sede]);
   useEffect(() => {
-    void cargar();
+    let activo = true;
+    Promise.resolve().then(() => {
+      if (activo) void cargar();
+    });
+    return () => {
+      activo = false;
+    };
   }, [cargar]);
-
-  const manejarCumplir = useCallback(async (turno, evidenciasUrls) => {
-    await ejecutar(async () => {
-      try {
-        await cumplirTurno(turno.id, evidenciasUrls);
-        cerrarModal();
-        await cargar();
-        informar('Turno cumplido', `El turno ha sido completado con éxito con ${evidenciasUrls.length} evidencia(s) fotográfica(s).`, 'exito');
-      } catch (err) {
-        informar('Error al culminar turno', err.message, 'error');
-      }
-    });
-  }, [cargar, cerrarModal, ejecutar, informar]);
-
-  const manejarConfirmar = useCallback(async (turno) => {
-    await ejecutar(async () => {
-      try {
-        await confirmarTurno(turno.id);
-        cerrarModal();
-        await cargar();
-        informar('Turno confirmado', 'El turno ha sido confirmado. Ya puede cargar las evidencias fotográficas para culminarlo.', 'exito');
-      } catch (err) {
-        informar('Error', err.message, 'error');
-      }
-    });
-  }, [cargar, cerrarModal, ejecutar, informar]);
-
-  const manejarRechazar = useCallback(async (turno, motivo) => {
-    await ejecutar(async () => {
-      try {
-        await rechazarTurno(turno.id, motivo);
-        cerrarModal();
-        await cargar();
-        informar('Turno rechazado', 'El turno está ahora en relevo pendiente para reasignación por supervisión.', 'advertencia');
-      } catch (err) {
-        informar('Error', err.message, 'error');
-      }
-    });
-  }, [cargar, cerrarModal, ejecutar, informar]);
-
-  const manejarReasignar = useCallback(async (turno, nuevoPersonalId) => {
-    await ejecutar(async () => {
-      try {
-        await reasignarTurno(turno.id, nuevoPersonalId);
-        cerrarModal();
-        await cargar();
-        informar('Turno reasignado', 'El turno fue reasignado y enviado a la bandeja del nuevo agente.', 'exito');
-      } catch (err) {
-        informar('Error', err.message, 'error');
-      }
-    });
-  }, [cargar, cerrarModal, ejecutar, informar]);
-
-  const manejarEliminar = useCallback((turno) => {
-    confirmar(`¿Eliminar el turno de ${turno.personal} del ${formatearFecha(turno.fecha)}?`, async () => {
-      await ejecutar(async () => {
-        try {
-          await eliminarTurno(turno.id);
-          cerrarModal();
-          await cargar();
-          informar('Turno eliminado', 'El turno fue eliminado correctamente.', 'exito');
-        } catch (err) {
-          informar('Error', err.message, 'error');
-        }
-      });
-    }, { titulo: 'Eliminar turno', variante: 'peligro' });
-  }, [cargar, cerrarModal, confirmar, ejecutar, informar]);
-
-  const abrirDetalleTurno = useCallback((t) => {
+  useEffect(() => {
+    if (gestor)
+      catalogosOperativos()
+        .then((c) => {
+          setCatalogo(c);
+          setServicios(c.servicios);
+        })
+        .catch((e) => setError(e.message));
+  }, [gestor]);
+  const accion = async (fn) => {
+    try {
+      await fn();
+      cerrarModal();
+      await cargar();
+    } catch (e) {
+      informar('No se pudo completar', e.message, 'error');
+    }
+  };
+  const actualizarDetalle = async (fn) => {
+    const resultado = await fn();
+    await cargar();
+    return resultado;
+  };
+  const detalle = (t) =>
     abrirModal({
       tipo: 'formulario',
-      titulo: 'Detalle de turno',
+      titulo: 'Detalle del turno',
       contenido: (
         <ModalDetalleTurno
           turno={t}
           usuario={usuario}
-          personal={personal}
-          onConfirmar={manejarConfirmar}
-          onCumplir={manejarCumplir}
-          onRechazar={manejarRechazar}
-          onReasignar={manejarReasignar}
-          onEliminar={manejarEliminar}
+          personal={catalogo.personal}
+          onConfirmar={(x) => actualizarDetalle(() => confirmarTurno(x.id))}
+          onCumplir={(x, ev) => actualizarDetalle(() => cumplirTurno(x.id, ev))}
+          onRechazar={(x, m) => actualizarDetalle(() => rechazarTurno(x.id, m))}
+          onReasignar={(x, p, m) => actualizarDetalle(() => reasignarTurno(x.id, p, m))}
+          onEliminar={(x) =>
+            confirmar('¿Eliminar este turno?', () =>
+              accion(() => eliminarTurno(x.id))
+            )
+          }
+          onActualizar={cargar}
           onCerrar={cerrarModal}
-          cargando={cargandoAccion}
+          cargando={false}
         />
       ),
     });
-  }, [abrirModal, cargandoAccion, cerrarModal, manejarConfirmar, manejarCumplir, manejarEliminar, manejarReasignar, manejarRechazar, personal, usuario]);
-
-  const abrirFormulario = useCallback(() => {
-    abrirModal({
-      tipo: 'formulario',
-      titulo: 'Asignar turno',
-      contenido: (
-        <FormTurno
-          personal={personal}
-          servicios={servicios}
-          sedes={sedes}
-          onGuardar={async (datos) => {
-            await ejecutar(async () => {
+  const formulario = useCallback(
+    () =>
+      abrirModal({
+        tipo: 'formulario',
+        titulo: 'Programar turno o plaza sin cubrir',
+        contenido: (
+          <FormTurno
+            personal={catalogo.personal}
+            servicios={servicios}
+            sedes={catalogo.sedes}
+            onCancelar={cerrarModal}
+            onGuardar={async (d) => {
               try {
-                await crearTurno(datos);
+                await crearTurno(d);
                 cerrarModal();
                 await cargar();
-                informar('Turno asignado', 'Turno registrado correctamente en estado sin confirmar', 'exito');
-              } catch (err) {
-                informar('Error', err.message, 'error');
+              } catch (e) {
+                informar('No se pudo programar', e.message, 'error');
               }
-            });
-          }}
-          onCancelar={cerrarModal}
-          cargando={cargandoAccion}
-        />
-      ),
-    });
-  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, personal, servicios, sedes]);
-
+            }}
+          />
+        ),
+      }),
+    [abrirModal, catalogo, servicios, cerrarModal, cargar, informar]
+  );
   useEffect(() => {
-    if (location.state?.abrirModal && personal.length > 0 && puedeAsignar) {
+    if (location.state?.abrirModal && gestor && catalogo.sedes.length) {
       window.history.replaceState({}, document.title);
-      const timer = setTimeout(() => {
-        abrirFormulario();
-      }, 0);
-      return () => clearTimeout(timer);
+      const t = setTimeout(formulario, 0);
+      return () => clearTimeout(t);
     }
-  }, [location.state, personal.length, puedeAsignar, abrirFormulario]);
-
-  const turnosPorPersona = (turnos || []).reduce((acc, t) => {
-    const key = t.personal_id;
-    if (!acc[key]) acc[key] = { nombre: t.personal, turnos: {} };
-    const fechaKey = String(t.fecha).slice(0, 10);
-    acc[key].turnos[fechaKey] = t;
-    return acc;
-  }, {});
-
-  const avanzarSemana = (delta) => {
-    const d = parsearLocalYmd(semanaBase);
-    d.setDate(d.getDate() + delta * 7);
-    setSemanaBase(formatearLocalYmd(d));
-  };
-
+  }, [location.state, gestor, catalogo.sedes.length, formulario]);
+  const filtrados = turnos.filter(
+    (t) =>
+      !estado ||
+      t.estado === estado ||
+      (estado === 'sin_cubrir' && (!t.personal_id || t.relevo_pendiente))
+  );
+  const dias = Array.from(
+    {
+      length: Math.min(
+        31,
+        Math.max(
+          1,
+          Math.round((new Date(hasta) - new Date(desde)) / 86400000) + 1
+        )
+      ),
+    },
+    (_, i) => desplazar(desde, i)
+  );
+  const columnas = [
+    { llave: 'fecha', titulo: 'Fecha' },
+    {
+      llave: 'horario',
+      titulo: 'Horario',
+      render: (t) => `${t.hora_inicio.slice(0, 5)}–${t.hora_fin.slice(0, 5)}`,
+    },
+    {
+      llave: 'personal',
+      titulo: 'Personal',
+      render: (t) => t.personal?.trim() || 'Sin asignar',
+    },
+    { llave: 'servicio', titulo: 'Servicio' },
+    {
+      llave: 'puesto',
+      titulo: 'Puesto / agencia',
+      render: (t) => t.puesto || t.sede,
+    },
+    {
+      llave: 'estado',
+      titulo: 'Estado',
+      render: (t) => <Badge valor={t.estado} />,
+    },
+    {
+      llave: 'acciones',
+      titulo: 'Acciones',
+      render: (t) => (
+        <Button tipo="button" variante="secundario" onClick={() => detalle(t)}>
+          Ver detalle
+        </Button>
+      ),
+    },
+  ];
   return (
     <div className="fade-in">
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Turnos</h1>
-          <p className="pagina-subtitulo">Planificación y control de turnos</p>
+          <p className="pagina-subtitulo">
+            Programación, asistencia, cobertura y trazabilidad
+          </p>
         </div>
-        {puedeAsignar && (
-          <Button variante="primario" onClick={abrirFormulario}>+ Asignar turno</Button>
+        {gestor && (
+          <Button tipo="button" onClick={formulario}>
+            Programar turno
+          </Button>
         )}
       </div>
-
       <div className="grilla-kpi grilla-kpi-3">
-        <KpiCard titulo="Programados" valor={resumen?.programados} color="primario" cargando={cargando} />
-        <KpiCard titulo="Cobertura" valor={resumen?.cobertura ? `${resumen.cobertura}%` : null} color="exito" cargando={cargando} />
-        <KpiCard titulo="Pendientes" valor={resumen?.pendientes} color="advertencia" cargando={cargando} />
+        <KpiCard titulo="Turnos del periodo" valor={turnos.length} />
+        <KpiCard
+          titulo="Cumplidos"
+          valor={turnos.filter((t) => t.estado === 'cumplido').length}
+          color="exito"
+        />
+        <KpiCard
+          titulo="Sin agente / relevo pendiente"
+          valor={
+            turnos.filter((t) => !t.personal_id || t.relevo_pendiente).length
+          }
+          color="advertencia"
+        />
       </div>
-
-      <div className="grilla-contenido grilla-3-1">
-        <div className="tarjeta">
-          <div className="turnos-controles">
-            <button className="turnos-nav-btn" onClick={() => avanzarSemana(-1)} aria-label="Semana anterior">←</button>
-            <span className="turnos-semana-label">
-              {formatearFecha(semana.desde)} — {formatearFecha(semana.hasta)}
-            </span>
-            <button className="turnos-nav-btn" onClick={() => avanzarSemana(1)} aria-label="Semana siguiente">→</button>
-            <Select id="filtro-sede-turnos" nombre="sedeId" valor={sedeId}
-              onChange={(e) => setSedeId(e.target.value)} placeholder="Todas las sedes">
-              {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-            </Select>
-          </div>
-
-          <div className="turnos-grilla-contenedor">
-            <table className="turnos-tabla">
-              <thead>
-                <tr>
-                  <th className="turnos-th-persona">Personal</th>
-                  {semana.dias.map((dia, i) => (
-                    <th key={dia} className="turnos-th-dia">
-                      <div>{DIAS[i]}</div>
-                      <div className="turnos-dia-fecha">{formatearFecha(dia).slice(0, 5)}</div>
-                    </th>
-                  ))}
-                  <th className="turnos-th-acciones">Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cargando ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Cargando turnos...</td></tr>
-                ) : Object.keys(turnosPorPersona).length === 0 ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--color-texto-tenue)' }}>Sin turnos programados en esta semana</td></tr>
-                ) : (
-                  Object.values(turnosPorPersona).map((p) => (
-                    <tr key={p.nombre} className="turnos-tr">
-                      <td className="turnos-td-persona">{p.nombre}</td>
-                      {semana.dias.map((dia) => {
-                        const t = p.turnos[dia];
-                        const cantEvidencias = Array.isArray(t?.evidencias) ? t.evidencias.length : 0;
-                        return (
-                          <td key={dia} className="turnos-td-dia">
-                            {t && (
-                              <div
-                                className={`turno-chip ${
-                                  t.relevo_pendiente
-                                    ? 'turno-chip-relevo'
-                                    : t.estado === 'sin_confirmar'
-                                    ? 'turno-chip-sin_confirmar'
-                                    : t.estado === 'confirmado'
-                                    ? 'turno-chip-confirmado'
-                                    : t.estado === 'pendiente'
-                                    ? 'turno-chip-pendiente'
-                                    : t.estado === 'cumplido'
-                                    ? 'turno-chip-cumplido'
-                                    : 'turno-chip-programado'
-                                }`}
-                                onClick={() => abrirDetalleTurno(t)}
-                                title={`Click para ver detalle del turno\n${t.servicio} (${t.hora_inicio?.slice(0, 5)} - ${t.hora_fin?.slice(0, 5)})\nEstado: ${t.relevo_pendiente ? 'Relevo pendiente' : t.estado}${cantEvidencias > 0 ? `\n${cantEvidencias} foto(s) de evidencia cargada(s)` : ''}`}
-                              >
-                                <span className="turno-chip-hora">{t.hora_inicio?.slice(0, 5)}</span>
-                                <span className="turno-chip-tag">
-                                  {t.relevo_pendiente
-                                    ? 'Relevo'
-                                    : t.estado === 'sin_confirmar'
-                                    ? 'Por confirmar'
-                                    : t.estado === 'confirmado'
-                                    ? 'Confirmado'
-                                    : t.estado === 'pendiente'
-                                    ? 'Pendiente'
-                                    : t.estado === 'cumplido'
-                                    ? 'Cumplido'
-                                    : 'Programado'}
-                                </span>
-                                {cantEvidencias > 0 && (
-                                  <span className="turno-chip-evidencias-indicador" title={`${cantEvidencias} evidencia(s) cargada(s)`}>
-                                    <Icono nombre="camara" tamano={10} />
-                                    <span>{cantEvidencias}</span>
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="turnos-td-acciones">
-                        {Object.values(p.turnos).slice(0, 1).map((t) => (
-                          <div key={t.id} style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                            <button
-                              className="accion-btn"
-                              onClick={() => abrirDetalleTurno(t)}
-                              title="Ver información del turno y bandeja"
-                            >
-                              <Icono nombre="servicios" tamano={13} />
-                            </button>
-                            {puedeAsignar && (
-                              <button
-                                className="accion-btn accion-btn-peligro"
-                                onClick={() => manejarEliminar(t)}
-                                title="Eliminar"
-                              >
-                                <Icono nombre="eliminar" tamano={13} />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+      <section className="tarjeta">
+        <div className="form-grilla">
+          <label>
+            Desde
+            <input
+              className="campo-input"
+              type="date"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+            />
+          </label>
+          <label>
+            Hasta
+            <input
+              className="campo-input"
+              type="date"
+              value={hasta}
+              min={desde}
+              onChange={(e) => setHasta(e.target.value)}
+            />
+          </label>
+          <label>
+            Sede
+            <select
+              className="campo-input"
+              value={sede}
+              onChange={(e) => setSede(e.target.value)}
+            >
+              <option value="">Todas</option>
+              {catalogo.sedes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Estado
+            <select
+              className="campo-input"
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+            >
+              <option value="">Todos</option>
+              <option value="cumplido">Cumplido</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="sin_confirmar">Por confirmar</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="programado">Programado</option>
+              <option value="sin_cubrir">Sin cubrir / relevo</option>
+            </select>
+          </label>
         </div>
-
-        <div className="tarjeta">
-          <h3 className="tarjeta-titulo">Alertas del día</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-            <div className="alerta-item alerta-advertencia">
-              <p className="alerta-titulo">Sin confirmar</p>
-              <p className="alerta-valor">{alertas?.sin_confirmar ?? 0}</p>
-            </div>
-            <div className="alerta-item alerta-peligro">
-              <p className="alerta-titulo">Relevo pendiente</p>
-              <p className="alerta-valor">{alertas?.relevo_pendiente ?? 0}</p>
-            </div>
-            <div className="alerta-item alerta-info">
-              <p className="alerta-titulo">Turnos pendientes</p>
-              <p className="alerta-valor">{alertas?.pendientes ?? 0}</p>
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: 8, margin: '16px 0' }}>
+          <Button
+            tipo="button"
+            variante={vista === 'calendario' ? 'primario' : 'secundario'}
+            onClick={() => setVista('calendario')}
+          >
+            Calendario
+          </Button>
+          <Button
+            tipo="button"
+            variante={vista === 'tabla' ? 'primario' : 'secundario'}
+            onClick={() => setVista('tabla')}
+          >
+            Tabla
+          </Button>
         </div>
-      </div>
+        {error && <p role="alert">{error}</p>}
+        {vista === 'tabla' ? (
+          <Table columnas={columnas} datos={filtrados} cargando={cargando} />
+        ) : (
+          <>
+            <p className="tarjeta-subtitulo">
+              Cada día muestra todos los turnos. El calendario admite hasta 31
+              días; use la tabla para periodos mayores.
+            </p>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))',
+                gap: 12,
+              }}
+            >
+              {dias.map((d) => (
+                <section
+                  key={d}
+                  style={{
+                    padding: 12,
+                    background: 'var(--color-fondo-alt)',
+                    borderRadius: 'var(--radio-md)',
+                  }}
+                >
+                  <h3>
+                    {new Date(d + 'T12:00:00-05:00').toLocaleDateString(
+                      'es-PE',
+                      {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        timeZone: 'America/Lima',
+                      }
+                    )}
+                  </h3>
+                  {filtrados
+                    .filter((t) => t.fecha === d)
+                    .map((t) => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        onClick={() => detalle(t)}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          textAlign: 'left',
+                          marginTop: 10,
+                          padding: 12,
+                          border: '1px solid var(--color-borde)',
+                          borderRadius: 'var(--radio-sm)',
+                          background: 'var(--color-superficie)',
+                          color: 'var(--color-texto-principal)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <strong>{t.personal?.trim() || 'Sin asignar'}</strong>
+                        <p>{t.servicio}</p>
+                        <p>{t.puesto || t.sede}</p>
+                        <small>
+                          {t.hora_inicio.slice(0, 5)}–{t.hora_fin.slice(0, 5)}
+                        </small>
+                        <div style={{ marginTop: 6 }}>
+                          <Badge valor={t.estado} />
+                        </div>
+                      </button>
+                    ))}
+                </section>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }
