@@ -1,3 +1,4 @@
+import { PlanOperativoServicio } from './PlanOperativoServicio';
 import { turnosServicio } from '../../api/operaciones';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -472,6 +473,7 @@ export default function ModalDetalleOperativo({
       </div>
 
       <div className="detalle-op-pestanas">
+        <button className={`pestana-btn ${pestana === 'plan' ? 'activa' : ''}`} onClick={() => setPestana('plan')} type="button">Plan operativo</button>
         <button
           className={`pestana-btn ${pestana === 'resumen' ? 'activa' : ''}`}
           onClick={() => setPestana('resumen')}
@@ -510,6 +512,7 @@ export default function ModalDetalleOperativo({
       </div>
 
       <div className="detalle-op-cuerpo">
+        {pestana === 'plan' && <PlanOperativoServicio servicioId={servicioId} puedeEditar={['administrador','jefe_operaciones','supervisor'].includes(usuario?.rol)} />}
         {pestana === 'resumen' && (
           <div className="detalle-panel-contenido">
             <div className="panel-info-grilla">

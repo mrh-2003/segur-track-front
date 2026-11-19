@@ -118,6 +118,7 @@ export default function FormTurno({
   return (
     <form onSubmit={manejarSubmit} noValidate>
       <p className="turno-disponibilidad-ayuda" role="status">{consultando ? 'Consultando disponibilidad…' : 'Personal vinculado al servicio, con horario compatible y sin cruces.'}</p>
+      {valores.servicioId && <p role="status">{opciones.servicios.find(s=>String(s.id)===String(valores.servicioId))?.plan_confirmado ? 'El turno generará automáticamente las actividades, rondas y reportes del plan del servicio.' : 'Este servicio no tiene plan operativo confirmado. Configúrelo en Servicios para generar sus obligaciones.'}</p>}
       {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
       <div className="form-grilla">
         <Input

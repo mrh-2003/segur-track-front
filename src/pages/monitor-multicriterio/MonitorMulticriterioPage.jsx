@@ -20,91 +20,142 @@ import {
 } from './MonitorVisuals';
 import { CORTOS, COLORES, porcentaje } from './monitor.presentacion';
 import './MonitorMulticriterioPage.css';
+import { KPIS, COLUMNAS } from './monitor.kpis';
 const numero = (v) =>
   v === null || v === undefined ? '—' : Number(v).toFixed(1);
+const NOMBRES_KPI = Object.fromEntries([0,1,2,3,4].map((i) => ['C0'+(i+1), KPIS.slice(i*2,i*2+2).map((k) => 'KPI '+k[0]+' · '+k[1])]));
+const GLOSARIO = COLUMNAS;
+function FilaKpi({ nombre, kpi, pendiente }) {
+  if (!kpi || kpi.denominador === 0) {
+    return (
+      <td className="mv-calculo-kpi sin-datos">
+        <span className="mv-calculo-kpi-nombre">{nombre}</span>
+        <span className="mv-calculo-kpi-tasa">{pendiente ? 'Faltan datos' : 'Sin casos'}</span>
+      </td>
+    );
+  }
+  return (
+    <td className="mv-calculo-kpi">
+      <span className="mv-calculo-kpi-nombre">{nombre}</span>
+      <span className="mv-calculo-kpi-fraccion">
+        {kpi.numerador} / {kpi.denominador}
+      </span>
+      <span className="mv-calculo-kpi-tasa">{numero(kpi.tasa)} %</span>
+    </td>
+  );
+}
 function Calculo({ servicio, filtros }) {
+  const criterios = servicio.criterios || [];
+  const periodoInicio = filtros.inicio
+    ? new Date(filtros.inicio).toLocaleDateString('es-PE', { timeZone: 'America/Lima' })
+    : 'Todo el histórico';
+  const periodoFin = new Date(filtros.fin).toLocaleDateString('es-PE', { timeZone: 'America/Lima' });
   return (
     <div className="mv-calculo">
-      <h3>
-        {servicio.servicio} · {numero(servicio.puntaje)} / 100
-      </h3>
-      <p>
-        {filtros.inicio
-          ? new Date(filtros.inicio).toLocaleDateString('es-PE', {
-              timeZone: 'America/Lima',
-            })
-          : 'Todo el histórico'}{' '}
-        al{' '}
-        {new Date(filtros.fin).toLocaleString('es-PE', {
-          timeZone: 'America/Lima',
-        })}{' '}
-        · {filtros.turno} · operativo-v2
-      </p>
-      <Table
-        columnas={[
-          { llave: 'nombre', titulo: 'Criterio' },
-          {
-            llave: 'dato',
-            titulo: 'Dato observado',
-            render: (c) =>
-              `${c.numerador} / ${c.denominador} · ${c.tasa === null ? c.estado : numero(c.tasa) + ' %'}`,
-          },
-          {
-            llave: 'umbral',
-            titulo: 'Umbral de riesgo',
-            render: (c) => `${c.umbral} %`,
-          },
-          {
-            llave: 'riesgo',
-            titulo: 'Riesgo normalizado',
-            render: (c) => numero(c.riesgo),
-          },
-          {
-            llave: 'peso',
-            titulo: 'Peso',
-            render: (c) => `${numero(c.peso * 100)} %`,
-          },
-          {
-            llave: 'aporte',
-            titulo: 'Aporte',
-            render: (c) => numero(c.aporte),
-          },
-        ]}
-        datos={servicio.criterios}
-      />
-      <p>
-        <strong>
-          Riesgo = mínimo(100, (100 − cumplimiento) ÷ umbral × 100).
-        </strong>
-      </p>
-      <p>
-        Aporte = riesgo × peso. Puntaje = suma de los cinco aportes. Mayor
-        puntaje significa mayor necesidad de atención.
-      </p>
-      <p>
-        {servicio.completo
-          ? servicio.criterios.map((c) => numero(c.aporte)).join(' + ') +
-            ' = ' +
-            numero(servicio.puntaje) +
-            ' puntos.'
-          : 'Evaluación incompleta: revise los datos faltantes. No se redistribuyen los pesos.'}
-      </p>
-      {servicio.criterios.some((c) => c.faltantes > 0) && (
-        <ul>
-          {servicio.criterios
-            .filter((c) => c.faltantes > 0)
-            .map((c) => (
-              <li key={c.codigo}>
-                {c.nombre}: {c.faltantes} registro(s) por completar.
-              </li>
-            ))}
-        </ul>
+      <div className="mv-calculo-encabezado">
+        <h3>{servicio.servicio}</h3>
+        <span className="mv-calculo-puntaje">
+          Criticidad: <strong>{numero(servicio.criticidad)}</strong> / 100
+        </span>
+        <p className="mv-calculo-periodo">
+          {periodoInicio} al {periodoFin} · Turno: {filtros.turno}
+        </p>
+      </div>
+      <p>Deslice la tabla horizontalmente para consultar todas las columnas. Debajo encontrará las fórmulas y definiciones.</p>
+      <div className="mv-calculo-tabla-scroll" tabIndex={0} aria-label="Detalle de cálculo por criterio" style={{ overflowX: 'auto' }}>
+        <table className="mv-calculo-tabla">
+          <thead>
+            <tr>
+              <th>Criterio</th>
+              <th>Primer KPI del criterio</th>
+              <th>Segundo KPI del criterio</th>
+              <th>Puntaje del criterio</th>
+              <th>Umbral de riesgo (%)</th>
+              <th>Riesgo normalizado</th>
+              <th>Peso</th>
+              <th>Aporte</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {criterios.map((c) => {
+              const nombres = NOMBRES_KPI[c.codigo] || ['KPI 01', 'KPI 02'];
+              const kpi01 = c.kpi01 || (c.tasa !== null ? { numerador: c.numerador, denominador: c.denominador, tasa: c.tasa } : null);
+              const kpi02 = c.kpi02 || null;
+              return (
+                <tr key={c.codigo}>
+                  <td className="mv-calculo-criterio">
+                    <span className="mv-calculo-codigo">{c.codigo}</span>
+                    <span>{c.nombre}</span>
+                  </td>
+                  <FilaKpi nombre={nombres[0]} kpi={kpi01} pendiente={c.faltantes > 0} />
+                  <FilaKpi nombre={nombres[1]} kpi={kpi02} pendiente={c.faltantes > 0} />
+                  <td className="mv-calculo-num">{numero(c.tasa)} %</td>
+                  <td className="mv-calculo-num">{c.umbral} %</td>
+                  <td className="mv-calculo-num">{numero(c.riesgo)}</td>
+                  <td className="mv-calculo-num">{numero(c.peso * 100)} %</td>
+                  <td className="mv-calculo-num mv-calculo-aporte">{numero(c.aporte)}</td>
+                  <td>{c.estado}{c.faltantes > 0 && <small> · {c.faltantes} datos pendientes. {c.observaciones}</small>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mv-calculo-formulas">
+        <p>
+          <strong>Puntaje del criterio</strong> = promedio de sus KPIs disponibles
+        </p>
+        <p>
+          <strong>Riesgo</strong> = mín(100, (100 − Puntaje) ÷ Umbral × 100)
+        </p>
+        <p>
+          <strong>Aporte</strong> = Riesgo × Peso
+        </p>
+        <p>
+          <strong>Criticidad del servicio</strong> = C01.aporte + C02.aporte + C03.aporte + C04.aporte + C05.aporte
+        </p>
+      </div>
+      <div className="mv-calculo-suma">
+        {criterios.map((c, i) => (
+          <span key={c.codigo}>
+            {i > 0 && <span className="mv-calculo-op">+</span>}
+            <span title={c.nombre}>{numero(c.aporte)}</span>
+          </span>
+        ))}
+        <span className="mv-calculo-op">=</span>
+        <strong>{numero(servicio.criticidad)}</strong>
+      </div>
+      {!servicio.completo && (
+        <p className="mv-calculo-incompleto" role="alert">
+          Evaluación incompleta: revise los datos faltantes. No se redistribuyen los pesos.
+        </p>
       )}
-      <p className="tarjeta-subtitulo">
-        Sin casos u obligaciones: aporte cero solo cuando no hay datos
-        pendientes. Los pesos y umbrales iniciales son configurables y requieren
-        validación operativa.
+      <p className="mv-calculo-nota">
+        Si algún KPI no tiene denominador (sin casos), su tasa se omite del promedio. Si ambos están sin casos y el inventario está confirmado, el criterio no aporta riesgo. Si faltan datos, la criticidad queda pendiente.
       </p>
+      <section className="mv-calculo-glosario">
+        <h3>Datos y fórmulas de los diez KPI</h3>
+        <p>El periodo y la franja seleccionan los turnos por inicio programado y las incidencias por fecha de registro. Las obligaciones pertenecen a esos turnos. Los eventos posteriores al corte se excluyen. Todas las fechas se interpretan en Lima.</p>
+        {KPIS.map(([id,nombre,n,d,nd,dd]) => <article key={id}>
+          <h4>KPI {id} · {nombre}</h4>
+          <p><b>Fórmula:</b> ({n} ÷ {d}) × 100</p>
+          <p><b>Numerador — {n}:</b> {nd}</p>
+          <p><b>Denominador — {d}:</b> {dd}</p>
+        </article>)}
+        <p>Para actividades, rondas y reportes, el plan confirmado del servicio genera y confirma el inventario del turno; la ejecución se registra en Turnos. La ausencia de registros sin esta confirmación significa información faltante.</p>
+      </section>
+      <details className="mv-calculo-glosario" open>
+        <summary>Significado de cada columna</summary>
+        <dl>
+          {GLOSARIO.map(([t, d]) => (
+            <div key={t}>
+              <dt>{t}</dt>
+              <dd>{d}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
     </div>
   );
 }
@@ -236,9 +287,15 @@ export default function MonitorMulticriterioPage() {
   const tabla = data?.tabla || [],
     criterios = data?.criterios || [];
   const totales = criterios.map((c, i) => {
-    const n = tabla.reduce((a, s) => a + s.criterios[i].numerador, 0),
-      d = tabla.reduce((a, s) => a + s.criterios[i].denominador, 0);
-    return { ...c, tasa: d ? (n / d) * 100 : null, n, d };
+    const agregar = (campo) => {
+      const n = tabla.reduce((a,s) => a + s.criterios[i][campo].numerador,0);
+      const d = tabla.reduce((a,s) => a + s.criterios[i][campo].denominador,0);
+      return {n,d,tasa:d ? n/d*100 : null};
+    };
+    const primero=agregar('kpi01'), segundo=agregar('kpi02');
+    const tasas=[primero.tasa,segundo.tasa].filter((v) => v!==null);
+    const faltan=tabla.some((s) => s.criterios[i].faltantes>0);
+    return {...c,tasa:faltan || !tasas.length ? null : tasas.reduce((a,v)=>a+v,0)/tasas.length,n:primero.n+segundo.n,d:primero.d+segundo.d,primero,segundo};
   });
   const niveles = ['alta', 'media', 'baja'].map((n) => ({
     nivel: n,
@@ -331,9 +388,9 @@ export default function MonitorMulticriterioPage() {
   };
   const tarjetas = [
     {
-      titulo: 'Cobertura operativa',
+      titulo: 'Actividades y rondas',
       valor: porcentaje(cobertura),
-      nota: `${totales[2]?.n ?? 0} de ${totales[2]?.d ?? 0} plazas cubiertas`,
+      nota: `Actividades: ${totales[2]?.primero.n ?? 0}/${totales[2]?.primero.d ?? 0} · Rondas: ${totales[2]?.segundo.n ?? 0}/${totales[2]?.segundo.d ?? 0}`,
       icono: 'escudo',
       tono: 'verde',
       tendencia: (data?.evolucion || []).map((d) => d.criterios[2].tasa),
@@ -751,7 +808,7 @@ export default function MonitorMulticriterioPage() {
                       {porcentaje(c.tasa)}
                     </strong>
                     <p>
-                      {c.numerador} de {c.denominador} registros
+                      Primer KPI: {c.kpi01.numerador}/{c.kpi01.denominador} · Segundo KPI: {c.kpi02.numerador}/{c.kpi02.denominador}
                     </p>
                     <small>{numero(c.aporte)} puntos de criticidad</small>
                   </article>
@@ -826,7 +883,7 @@ export default function MonitorMulticriterioPage() {
                         <div
                           className={`mv-heat-cell ${c.riesgo >= 60 ? 'alto' : c.riesgo >= 30 ? 'medio' : 'bajo'}`}
                         >
-                          <strong>{porcentaje(c.tasa)}</strong>
+                          <strong>{c.tasa === null ? c.estado : porcentaje(c.tasa)}</strong>
                           <span>Riesgo {numero(c.riesgo)}</span>
                           <small>{numero(c.aporte)} pts aportados</small>
                         </div>
@@ -876,8 +933,7 @@ export default function MonitorMulticriterioPage() {
                   color={COLORES[i]}
                 />
                 <small>
-                  {c.n.toLocaleString('es-PE')} de {c.d.toLocaleString('es-PE')}{' '}
-                  registros del periodo
+                  Primer KPI: {c.primero.n}/{c.primero.d} · Segundo KPI: {c.segundo.n}/{c.segundo.d}
                 </small>
               </article>
             ))}
@@ -896,7 +952,7 @@ export default function MonitorMulticriterioPage() {
                   llave: c.codigo,
                   titulo: CORTOS[i],
                   render: (d) =>
-                    `${porcentaje(d.criterios[i].tasa)} · ${d.criterios[i].numerador}/${d.criterios[i].denominador}`,
+                    `${porcentaje(d.criterios[i].tasa)} · KPI: ${d.criterios[i].kpi01.numerador}/${d.criterios[i].kpi01.denominador} y ${d.criterios[i].kpi02.numerador}/${d.criterios[i].kpi02.denominador}`,
                 })),
               ]}
             />
@@ -959,29 +1015,14 @@ export default function MonitorMulticriterioPage() {
           </div>
           <div className="mv-definiciones">
             {[
-              [
-                'Turnos cumplidos',
-                'Turnos vencidos cumplidos, con asistencia validada y salida al término previsto, sobre los turnos vencidos.',
-              ],
-              [
-                'Personal puntual',
-                'Ingresos dentro de la tolerancia establecida, sobre las presencias verificadas.',
-              ],
-              [
-                'Cobertura efectiva',
-                'Plazas con presencia validada, sobre las plazas requeridas cuyo inicio ya ocurrió.',
-              ],
-              [
-                'Evidencia registrada',
-                'Registros presentados dentro del plazo, limitados a la obligación exigible.',
-              ],
-              [
-                'Atención en plazo',
-                'Incidencias atendidas dentro del SLA, sobre casos atendidos o con plazo vencido.',
-              ],
+              ['Puntualidad y asistencia', 'KPI 01: asistencia validada. KPI 02: ingresos puntuales entre las asistencias.'],
+              ['Cumplimiento de protocolos y consignas', 'KPI 03: verificaciones conformes. KPI 04: consignas cumplidas entre las verificadas.'],
+              ['Cumplimiento de actividades y rondas', 'KPI 05: actividades completadas. KPI 06: rondas completadas entre las exigibles.'],
+              ['Cumplimiento de reportes operativos', 'KPI 07: reportes entregados. KPI 08: entregados dentro del plazo entre los requeridos exigibles.'],
+              ['Gestión de incidencias', 'KPI 09: resolución. KPI 10: primera atención en plazo, con exigibilidad independiente.'],
             ].map(([t, d], i) => (
               <article key={t}>
-                <span style={{ color: COLORES[i] }}>C{i + 1}</span>
+                <span style={{ color: COLORES[i] }}>C0{i + 1}</span>
                 <div>
                   <h3>{t}</h3>
                   <p>{d}</p>
@@ -996,7 +1037,7 @@ export default function MonitorMulticriterioPage() {
               <h3>Fuentes y validación</h3>
               <p>
                 Los cálculos utilizan programación, asistencia validada,
-                obligaciones de evidencia y tiempos de atención. Las
+                verificaciones de protocolos y consignas, actividades, rondas, reportes y plazos de atención y resolución. Las
                 instantáneas conservan filtros, pesos y resultados. Los
                 parámetros deben revisarse con el responsable operativo.
               </p>
@@ -1047,7 +1088,7 @@ export default function MonitorMulticriterioPage() {
           <span>
             {data?.demo ? 'Datos de demostración' : 'Información operativa'}
             <i />
-            Modelo operativo-v2
+            Modelo {data?.version || 'operativo-v4'}
             <i />
             {fechaCorte}
           </span>

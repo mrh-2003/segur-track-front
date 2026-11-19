@@ -438,10 +438,15 @@ export default function IncidenciasPage() {
 
     {
       llave: 'sla_min',
-      titulo: 'Plazo',
+      titulo: 'Plazo de atención',
       render: (f) => (f.sla_min ? `${f.sla_min} min` : 'Sin definir'),
     },
 
+    {
+      llave: 'sla_resolucion_min',
+      titulo: 'Plazo de resolución',
+      render: (f) => f.sla_resolucion_min ? `${f.sla_resolucion_min} min` : 'Pendiente de definir',
+    },
     {
       llave: 'personal_registra',
       titulo: 'Registrado por',

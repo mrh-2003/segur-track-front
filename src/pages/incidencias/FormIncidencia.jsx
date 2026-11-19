@@ -64,6 +64,7 @@ export default function FormIncidencia({
         : '',
 
       slaMin: inicial?.sla_min || '',
+      slaResolucionMin: inicial?.sla_resolucion_min || '',
 
       descripcion: inicial?.descripcion || '',
 
@@ -87,6 +88,7 @@ export default function FormIncidencia({
 
       responsableId: Number(valores.responsableId),
 
+      slaResolucionMin: valores.slaResolucionMin ? Number(valores.slaResolucionMin) : undefined,
       slaMin: valores.slaMin ? Number(valores.slaMin) : undefined,
 
       tipoIncidenciaId: parseInt(valores.tipoIncidenciaId, 10),
@@ -137,6 +139,13 @@ export default function FormIncidencia({
           />
         </label>
 
+        <label className="campo">
+          Plazo de resolución desde el registro (minutos)
+          <input className="campo-input" type="number" min="1" max="525600"
+            name="slaResolucionMin" value={valores.slaResolucionMin} onChange={manejarCambio}
+            placeholder="Nuevas: alta 240, media 1440, baja 2880" />
+          <small>Si deja el plazo vacío se aplicará la configuración vigente por prioridad al guardar. Los plazos se cuentan desde el registro.</small>
+        </label>
         <Select
           id="form-inc-tipo"
           label="Tipo de incidencia"

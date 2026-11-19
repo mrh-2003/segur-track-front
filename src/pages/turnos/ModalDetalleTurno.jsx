@@ -1,3 +1,4 @@
+import { EjecucionTurno } from './EjecucionTurno';
 import { useState, useRef, useEffect } from 'react';
 import OperacionTurnoPanel from './OperacionTurnoPanel';
 import { Button } from '../../components/ui/Button';
@@ -99,6 +100,7 @@ export default function ModalDetalleTurno({ turno: inicial, usuario, personal = 
       <label className="campo">Motivo<input required minLength={5} className="campo-input" value={motivo} onChange={(e) => setMotivo(e.target.value)} /></label>
       <div className="form-pie"><Button variante="secundario" disabled={ocupado} onClick={() => setModo('')}>Cancelar</Button><Button tipo="submit" disabled={ocupado || motivo.trim().length<5 || (modo==='reasignar' && !personalId)}>Guardar cambio</Button></div>
     </form>}
+    <EjecucionTurno turno={turno} usuario={usuario} onActualizar={onActualizar} />
     <OperacionTurnoPanel key={`${turno.ingreso_real}-${turno.salida_real}-${turno.asistencia_validada}`} turno={turno} usuario={usuario} onActualizar={async (r) => {if(r) setTurno((t) => ({...t,...r})); await onActualizar?.();}} />
     <div className="form-pie"><Button variante="secundario" disabled={ocupado} onClick={onCerrar}>Cerrar detalle</Button></div>
   </div>;

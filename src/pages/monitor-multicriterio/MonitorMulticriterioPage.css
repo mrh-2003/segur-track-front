@@ -1772,3 +1772,34 @@
     grid-column: 1/-1;
   }
 }
+.mv-datos-kpi { display: grid; gap: 16px; }
+.mv-datos-kpi label { display: grid; gap: 6px; }
+.mv-calculo-glosario article { padding: 12px 0; border-bottom: 1px solid var(--color-borde); }
+.mv-calculo-glosario article h4 { margin: 0 0 8px; }
+.mv-calculo-glosario article p { margin: 6px 0; }
+.mv-calculo-tabla td small { display: block; min-width: 160px; }
+.mv-calculo-tabla { width: 100%; min-width: 1250px; border-collapse: collapse; font-size: 12px; line-height: 1.6; }
+.mv-calculo-tabla th, .mv-calculo-tabla td { padding: 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-borde); }
+.mv-calculo-tabla th { background: var(--color-fondo-alt); color: var(--color-texto-secundario); font-weight: 600; }
+.mv-calculo-kpi { min-width: 180px; }
+.mv-calculo-kpi span, .mv-calculo-criterio span { display: block; }
+.mv-calculo-kpi-nombre { font-weight: 600; margin-bottom: 8px; }
+.mv-calculo-kpi-fraccion { font-variant-numeric: tabular-nums; color: var(--color-texto-secundario); }
+.mv-calculo-kpi-tasa { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.mv-calculo-criterio { min-width: 170px; }
+.mv-calculo-codigo { font-weight: 700; margin-bottom: 6px; color: var(--color-primario); }
+.mv-calculo-num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mv-calculo-formulas { margin: 20px 0; padding: 14px 18px; background: var(--color-fondo-alt); border-radius: 10px; line-height: 1.8; }
+.mv-calculo-formulas p { margin: 4px 0; }
+.mv-calculo-suma { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 18px; padding: 12px 0; }
+.mv-calculo-op { margin-right: 12px; }
+.mv-calculo-incompleto { padding: 12px; border-left: 3px solid var(--color-advertencia); background: var(--color-fondo-alt); }
+.mv-calculo-glosario { margin-top: 24px; line-height: 1.7; }
+.mv-calculo-glosario summary { cursor: pointer; font-weight: 700; }
+.mv-calculo-glosario dl > div { margin: 12px 0; }
+.mv-calculo-glosario dt { font-weight: 700; }
+.mv-calculo-glosario dd { margin-left: 0; color: var(--color-texto-secundario); }
+.mv-datos-kpi .mv-calculo-tabla { min-width: 700px; }
+.mv-calculo-tabla-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+
+.mv-datos-kpi label, .mv-datos-kpi select { min-width: 0; max-width: 100%; }

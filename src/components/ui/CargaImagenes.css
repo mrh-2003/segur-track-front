@@ -1,0 +1,9 @@
+.carga-imagenes { display:grid; gap:12px; }
+.carga-imagenes-zona { display:flex; flex-direction:column; align-items:center; gap:10px; padding:22px 16px; border:1px dashed var(--color-primario); border-radius:12px; background:var(--color-primario-suave); text-align:center; }
+.carga-imagenes-zona>span:not(.carga-imagenes-icono),.carga-imagenes-zona small { color:var(--color-texto-secundario); font-size:12px; }
+.carga-imagenes-icono { display:grid; place-items:center; width:36px; height:36px; border-radius:10px; background:var(--color-superficie); color:var(--color-primario); font-size:24px; }
+.carga-imagenes-previews { display:grid; grid-template-columns:repeat(auto-fill,minmax(105px,1fr)); gap:12px; }
+.carga-imagenes-previews figure { position:relative; min-width:0; border:1px solid var(--color-borde); border-radius:10px; overflow:hidden; background:var(--color-superficie); }
+.carga-imagenes-previews img { display:block; width:100%; height:100px; object-fit:cover; }
+.carga-imagenes-previews figcaption { padding:8px; font-size:11px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.carga-imagenes-previews button { position:absolute; right:5px; top:5px; width:27px; height:27px; border:1px solid #fff; border-radius:50%; background:#0f172a; color:#fff; font-size:18px; }

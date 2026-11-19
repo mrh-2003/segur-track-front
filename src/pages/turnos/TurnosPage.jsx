@@ -101,6 +101,7 @@ export default function TurnosPage() {
     abrirModal({
       tipo: 'formulario',
       titulo: 'Detalle del turno',
+      tamano: 'xl',
       contenido: (
         <ModalDetalleTurno
           turno={t}
