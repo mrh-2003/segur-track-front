@@ -14,3 +14,5 @@ export const obtenerIndicadoresMulticriterio = () =>
   get('/multicriterio/indicadores');
 export const detalleServicioMcda = (id, filtros = {}) =>
   get(`/multicriterio/servicios/${id}?` + new URLSearchParams(filtros));
+
+export const detalleAgenteMcda = (servicioId,personalId,filtros={}) => get(`/multicriterio/servicios/${servicioId}/agentes/${personalId}?`+new URLSearchParams(filtros));

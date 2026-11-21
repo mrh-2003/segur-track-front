@@ -1,3 +1,4 @@
+import { useAuth } from '../../hooks/useAuth';
 import { useForm } from '../../hooks/useForm';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -16,14 +17,15 @@ const validar = (v) => {
 };
 
 export default function FormServicio({ inicial, clientes, personal, sedes, onGuardar, onCancelar, cargando }) {
-  const supervisores = personal.filter((p) => p.cargo === 'supervisor');
+  const {usuario}=useAuth();
+  const supervisores = personal.filter((p) => p.cargo === 'supervisor' && (usuario?.rol!=='supervisor' || p.id===usuario.personalId));
 
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     {
       nombre: inicial?.nombre || '',
       clienteId: inicial?.cliente_id ? String(inicial.cliente_id) : (inicial?.clienteId ? String(inicial.clienteId) : ''),
       sedeId: inicial?.sede_id ? String(inicial.sede_id) : (inicial?.sedeId ? String(inicial.sedeId) : ''),
-      supervisorId: inicial?.supervisor_id ? String(inicial.supervisor_id) : (inicial?.supervisorId ? String(inicial.supervisorId) : ''),
+      supervisorId: inicial?.supervisor_id ? String(inicial.supervisor_id) : (inicial?.supervisorId ? String(inicial.supervisorId) : usuario?.rol==='supervisor'?String(usuario.personalId||''):''),
       horaInicio: (inicial?.hora_inicio || inicial?.horaInicio || '').slice(0, 5),
       horaFin: (inicial?.hora_fin || inicial?.horaFin || '').slice(0, 5),
       estado: inicial?.estado || 'programado',

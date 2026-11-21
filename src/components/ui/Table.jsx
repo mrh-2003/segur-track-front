@@ -1,6 +1,6 @@
 import './Table.css';
 
-export function Table({ columnas, datos, cargando, vacio = 'Sin datos disponibles' }) {
+export function Table({ columnas, datos, cargando, claseFila, vacio = 'Sin datos disponibles' }) {
   if (cargando) {
     return (
       <div className="tabla-contenedor">
@@ -30,7 +30,7 @@ export function Table({ columnas, datos, cargando, vacio = 'Sin datos disponible
             </tr>
           ) : (
             datos.map((fila, i) => (
-              <tr key={fila.id ?? i} className="tabla-tr">
+              <tr key={fila.id ?? i} className={`tabla-tr ${claseFila?.(fila) || ''}`}>
                 {columnas.map((col) => (
                   <td key={col.llave} className="tabla-td">
                     {col.render ? col.render(fila) : fila[col.llave]}

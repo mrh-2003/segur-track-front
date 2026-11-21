@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   resultadoMulticriterio,
   detalleServicioMcda,
+  detalleAgenteMcda,
   evaluarServicio,
   actualizarPesosCriterios,
 } from '../../api/multicriterio';
@@ -28,20 +29,20 @@ const GLOSARIO = COLUMNAS;
 function FilaKpi({ nombre, kpi, pendiente }) {
   if (!kpi || kpi.denominador === 0) {
     return (
-      <td className="mv-calculo-kpi sin-datos">
+      <article className="mv-calculo-kpi sin-datos">
         <span className="mv-calculo-kpi-nombre">{nombre}</span>
         <span className="mv-calculo-kpi-tasa">{pendiente ? 'Faltan datos' : 'Sin casos'}</span>
-      </td>
+      </article>
     );
   }
   return (
-    <td className="mv-calculo-kpi">
+    <article className="mv-calculo-kpi">
       <span className="mv-calculo-kpi-nombre">{nombre}</span>
       <span className="mv-calculo-kpi-fraccion">
         {kpi.numerador} / {kpi.denominador}
       </span>
       <span className="mv-calculo-kpi-tasa">{numero(kpi.tasa)} %</span>
-    </td>
+    </article>
   );
 }
 function Calculo({ servicio, filtros }) {
@@ -53,7 +54,7 @@ function Calculo({ servicio, filtros }) {
   return (
     <div className="mv-calculo">
       <div className="mv-calculo-encabezado">
-        <h3>{servicio.servicio}</h3>
+        <h3>{servicio.agente?servicio.agente.nombre+' · ':''}{servicio.servicio}</h3>
         <span className="mv-calculo-puntaje">
           Criticidad: <strong>{numero(servicio.criticidad)}</strong> / 100
         </span>
@@ -61,46 +62,13 @@ function Calculo({ servicio, filtros }) {
           {periodoInicio} al {periodoFin} · Turno: {filtros.turno}
         </p>
       </div>
-      <p>Deslice la tabla horizontalmente para consultar todas las columnas. Debajo encontrará las fórmulas y definiciones.</p>
-      <div className="mv-calculo-tabla-scroll" tabIndex={0} aria-label="Detalle de cálculo por criterio" style={{ overflowX: 'auto' }}>
-        <table className="mv-calculo-tabla">
-          <thead>
-            <tr>
-              <th>Criterio</th>
-              <th>Primer KPI del criterio</th>
-              <th>Segundo KPI del criterio</th>
-              <th>Puntaje del criterio</th>
-              <th>Umbral de riesgo (%)</th>
-              <th>Riesgo normalizado</th>
-              <th>Peso</th>
-              <th>Aporte</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {criterios.map((c) => {
-              const nombres = NOMBRES_KPI[c.codigo] || ['KPI 01', 'KPI 02'];
-              const kpi01 = c.kpi01 || (c.tasa !== null ? { numerador: c.numerador, denominador: c.denominador, tasa: c.tasa } : null);
-              const kpi02 = c.kpi02 || null;
-              return (
-                <tr key={c.codigo}>
-                  <td className="mv-calculo-criterio">
-                    <span className="mv-calculo-codigo">{c.codigo}</span>
-                    <span>{c.nombre}</span>
-                  </td>
-                  <FilaKpi nombre={nombres[0]} kpi={kpi01} pendiente={c.faltantes > 0} />
-                  <FilaKpi nombre={nombres[1]} kpi={kpi02} pendiente={c.faltantes > 0} />
-                  <td className="mv-calculo-num">{numero(c.tasa)} %</td>
-                  <td className="mv-calculo-num">{c.umbral} %</td>
-                  <td className="mv-calculo-num">{numero(c.riesgo)}</td>
-                  <td className="mv-calculo-num">{numero(c.peso * 100)} %</td>
-                  <td className="mv-calculo-num mv-calculo-aporte">{numero(c.aporte)}</td>
-                  <td>{c.estado}{c.faltantes > 0 && <small> · {c.faltantes} datos pendientes. {c.observaciones}</small>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="mv-calculo-tarjetas" aria-label="Cálculos por criterio">
+        {criterios.map(c=><section className="mv-calculo-tarjeta" key={c.codigo}>
+          <header><div><span className="mv-calculo-codigo">{c.codigo}</span><h4>{c.nombre}</h4></div><span className="mv-calculo-estado">{c.estado}</span></header>
+          <div className="mv-calculo-par"><FilaKpi nombre={NOMBRES_KPI[c.codigo]?.[0]} kpi={c.kpi01} pendiente={c.faltantes>0}/><FilaKpi nombre={NOMBRES_KPI[c.codigo]?.[1]} kpi={c.kpi02} pendiente={c.faltantes>0}/></div>
+          <dl className="mv-calculo-metricas">{[['Cumplimiento',c.tasa===null?'—':numero(c.tasa)+' %'],['Umbral',c.umbral+' %'],['Riesgo',numero(c.riesgo)],['Peso',numero(c.peso*100)+' %'],['Aporte',numero(c.aporte)+' pts']].map(([titulo,valor])=><div key={titulo}><dt>{titulo}</dt><dd>{valor}</dd></div>)}</dl>
+          {c.faltantes>0&&<p className="mv-calculo-incompleto">{c.faltantes} datos pendientes. {c.observaciones}</p>}
+        </section>)}
       </div>
       <div className="mv-calculo-formulas">
         <p>
@@ -113,7 +81,7 @@ function Calculo({ servicio, filtros }) {
           <strong>Aporte</strong> = Riesgo × Peso
         </p>
         <p>
-          <strong>Criticidad del servicio</strong> = C01.aporte + C02.aporte + C03.aporte + C04.aporte + C05.aporte
+          <strong>Criticidad {servicio.agente?'del agente':'del servicio'}</strong> = C01.aporte + C02.aporte + C03.aporte + C04.aporte + C05.aporte
         </p>
       </div>
       <div className="mv-calculo-suma">
@@ -134,8 +102,8 @@ function Calculo({ servicio, filtros }) {
       <p className="mv-calculo-nota">
         Si algún KPI no tiene denominador (sin casos), su tasa se omite del promedio. Si ambos están sin casos y el inventario está confirmado, el criterio no aporta riesgo. Si faltan datos, la criticidad queda pendiente.
       </p>
-      <section className="mv-calculo-glosario">
-        <h3>Datos y fórmulas de los diez KPI</h3>
+      <details className="mv-calculo-glosario">
+        <summary>Datos y fórmulas de los diez KPI</summary>
         <p>El periodo y la franja seleccionan los turnos por inicio programado y las incidencias por fecha de registro. Las obligaciones pertenecen a esos turnos. Los eventos posteriores al corte se excluyen. Todas las fechas se interpretan en Lima.</p>
         {KPIS.map(([id,nombre,n,d,nd,dd]) => <article key={id}>
           <h4>KPI {id} · {nombre}</h4>
@@ -144,9 +112,9 @@ function Calculo({ servicio, filtros }) {
           <p><b>Denominador — {d}:</b> {dd}</p>
         </article>)}
         <p>Para actividades, rondas y reportes, el plan confirmado del servicio genera y confirma el inventario del turno; la ejecución se registra en Turnos. La ausencia de registros sin esta confirmación significa información faltante.</p>
-      </section>
-      <details className="mv-calculo-glosario" open>
-        <summary>Significado de cada columna</summary>
+      </details>
+      <details className="mv-calculo-glosario">
+        <summary>Significado de las métricas</summary>
         <dl>
           {GLOSARIO.map(([t, d]) => (
             <div key={t}>
@@ -237,6 +205,24 @@ function Configuracion({ criterios, onGuardar }) {
     </form>
   );
 }
+export function DetallePrioridad({servicioId,filtros,onAbrirIncidencia}){
+  const [base,setBase]=useState(null),[detalle,setDetalle]=useState(null),[agenteId,setAgenteId]=useState(null),[formulas,setFormulas]=useState(false),[error,setError]=useState(''),[cargando,setCargando]=useState(true);
+  useEffect(()=>{let activo=true;Promise.resolve().then(()=>{if(activo){setCargando(true);setError('');}return agenteId?detalleAgenteMcda(servicioId,agenteId,filtros):detalleServicioMcda(servicioId,filtros);}).then(r=>{if(activo){setDetalle(r);if(!agenteId)setBase(r);}}).catch(e=>{if(activo)setError(e.message);}).finally(()=>{if(activo)setCargando(false);});return()=>{activo=false;};},[servicioId,agenteId,filtros]);
+  return <div className="mv-page mv-detalle-modal">
+    {error&&<p role="alert">{error}</p>}
+    {base&&<section><h3>Agentes encargados del servicio</h3><p>Seleccione un agente para analizar sus turnos, obligaciones e incidencias. Se muestran también agentes con operación en el periodo que ya no están asignados.</p><div className="mv-agentes">
+      <button type="button" aria-pressed={!agenteId} onClick={()=>{setAgenteId(null);setFormulas(false);}}>Todo el servicio</button>
+      {base.agentes.map(p=><button type="button" key={p.id} aria-pressed={agenteId===p.id} onClick={()=>{setAgenteId(p.id);setFormulas(false);}}><b>{p.nombre}</b><small>{p.turnos} turnos · {p.incidencias} incidencias · {p.resueltas} resueltas · {p.asignado_actual?'Asignado actualmente':'Histórico'}{p.estado!=='activo'?' · '+p.estado:''}</small></button>)}
+    </div>{!base.agentes.length&&<p>No hay agentes asignados ni con operación registrada en este periodo.</p>}</section>}
+    {cargando?<p role="status">Cargando análisis…</p>:detalle&&<>
+      <header className="mv-panel-heading"><div><span className="mv-eyebrow">{detalle.agente?'ANÁLISIS DEL AGENTE':'DETALLE DEL SERVICIO'}</span><h2>{detalle.agente?.nombre||detalle.servicio}</h2><p>{detalle.cliente} · {detalle.turnos} turnos analizados</p>{detalle.atribucion&&<p>{detalle.atribucion}</p>}</div><Nivel nivel={detalle.nivel}/></header>
+      <Button tipo="button" variante="secundario" onClick={()=>setFormulas(!formulas)}>{formulas?'Volver a los criterios':'Ver cálculos y fórmulas'}</Button>
+      {detalle.incidencias_resumen&&<><div className="mv-incidencias-balance"><span><b>{detalle.incidencias_resumen.total}</b> incidencias</span><span><b>{detalle.incidencias_resumen.resueltas}</b> resueltas</span><span><b>{detalle.incidencias_resumen.en_proceso}</b> en proceso</span><span><b>{detalle.incidencias_resumen.por_atender}</b> por atender</span></div>{!detalle.agente&&detalle.incidencias_resumen.sin_operador>0&&<p className="mv-calculo-nota">{detalle.incidencias_resumen.sin_operador} incidencias están asignadas a supervisión o sin un agente identificado. Forman parte del servicio y no se atribuyen a un operador hasta definir su responsable.</p>}</>}
+      {formulas?<Calculo servicio={detalle} filtros={detalle.filtros}/>:<div className="mv-detalle-criterios">{detalle.criterios.map((c,n)=><article key={c.codigo}><span>{CORTOS[n]}</span><strong style={{color:COLORES[n]}}>{c.tasa===null?c.estado:porcentaje(c.tasa)}</strong><p>{NOMBRES_KPI[c.codigo]?.[0]}: {c.kpi01.numerador}/{c.kpi01.denominador}</p><p>{NOMBRES_KPI[c.codigo]?.[1]}: {c.kpi02.numerador}/{c.kpi02.denominador}</p><small>{numero(c.aporte)} puntos de criticidad</small>{c.observaciones&&<p>{c.observaciones}</p>}</article>)}</div>}
+      {!!detalle.criticas.length&&<section><h3>Incidencias pendientes {detalle.agente?'a cargo del agente':'del servicio'}</h3>{detalle.criticas.map(i=><article className="mv-incidencia-agente" key={i.id}><b>{i.codigo} · {i.tipo}</b><p>{i.descripcion}</p><small>{i.responsable} · {i.estado}</small><div className="mv-incidencia-enlace"><Button tipo="button" variante="secundario" onClick={()=>onAbrirIncidencia(i)} aria-label={'Abrir incidencia '+i.codigo}>Abrir incidencia</Button></div></article>)}</section>}
+    </>}
+  </div>;
+}
 export default function MonitorMulticriterioPage() {
   const [f, setF] = useState({ periodo: '30', servicios: '', turno: 'ambos' });
   const [tab, setTab] = useState(0),
@@ -304,8 +290,7 @@ export default function MonitorMulticriterioPage() {
   const filtrados = tabla.filter((s) => !nivel || s.nivel === nivel),
     cumplimiento = totales[0]?.tasa,
     cobertura = totales[2]?.tasa;
-  const totalTurnos = tabla.reduce((n, s) => n + s.turnos, 0),
-    criticas = detalle?.criticas || data?.criticas || [];
+  const totalTurnos = tabla.reduce((n, s) => n + s.turnos, 0);
   const fechaCorte = data
     ? new Date(data.filtros.fin).toLocaleString('es-PE', {
         timeZone: 'America/Lima',
@@ -322,17 +307,13 @@ export default function MonitorMulticriterioPage() {
       titulo: 'Ver cálculo · evaluación multicriterio',
       contenido: <Calculo servicio={s} filtros={data.filtros} />,
     });
-  const verDetalle = async (s) => {
-    try {
-      setDetalle(await detalleServicioMcda(s.id, f));
-      requestAnimationFrame(() =>
-        document
-          .getElementById('detalle-servicio')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      );
-    } catch (e) {
-      setError(e.message);
-    }
+  const verDetalle = (s) => {
+    setDetalle(s);
+    abrirModal({tipo:'formulario',tamano:'xl',titulo:'Detalle del servicio · '+s.servicio,
+      contenido:<DetallePrioridad servicioId={s.id} filtros={f} onAbrirIncidencia={i=>{
+        cerrarModal();
+        navigate('/incidencias?incidencia='+i.id,{state:{servicioId:s.id,incidenciaCodigo:i.codigo}});
+      }}/>});
   };
   const ayuda = () =>
     abrirModal({
@@ -774,58 +755,7 @@ export default function MonitorMulticriterioPage() {
               </section>
             </aside>
           </div>
-          {detalle && (
-            <section className="mv-panel mv-detalle" id="detalle-servicio">
-              <div className="mv-panel-heading">
-                <div>
-                  <span className="mv-eyebrow">DETALLE DEL SERVICIO</span>
-                  <h2>{detalle.servicio}</h2>
-                  <p>
-                    {detalle.cliente} · {detalle.turnos} turnos analizados
-                  </p>
-                </div>
-                <div className="mv-detalle-acciones">
-                  <Nivel nivel={detalle.nivel} />
-                  <Button tipo="button" onClick={() => calculo(detalle)}>
-                    <IconoMonitor nombre="calculo" tamano={16} />
-                    Ver cálculo
-                  </Button>
-                  <button
-                    type="button"
-                    className="mv-cerrar-detalle"
-                    aria-label="Cerrar detalle"
-                    onClick={() => setDetalle(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-              <div className="mv-detalle-criterios">
-                {detalle.criterios.map((c, i) => (
-                  <article key={c.codigo}>
-                    <span>{CORTOS[i]}</span>
-                    <strong style={{ color: COLORES[i] }}>
-                      {porcentaje(c.tasa)}
-                    </strong>
-                    <p>
-                      Primer KPI: {c.kpi01.numerador}/{c.kpi01.denominador} · Segundo KPI: {c.kpi02.numerador}/{c.kpi02.denominador}
-                    </p>
-                    <small>{numero(c.aporte)} puntos de criticidad</small>
-                  </article>
-                ))}
-              </div>
-              {!!criticas.length && (
-                <>
-                  <h3 className="mv-seccion-subtitulo">
-                    Incidencias críticas de este servicio
-                  </h3>
-                  <div className="mv-incidentes-detalle">
-                    {incidentes(criticas, 6)}
-                  </div>
-                </>
-              )}
-            </section>
-          )}
+
         </>
       )}
       {tab === 1 && (

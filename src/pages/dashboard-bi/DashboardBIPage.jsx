@@ -1,192 +1,49 @@
-import { useState, useEffect } from 'react';
-import { useModal } from '../../hooks/useModal';
-import {
-  indicadoresBi, evolucionCumplimiento,
-  incidenciasPorTipo, desempenoPorServicio, embedBi,
-} from '../../api/bi';
-import { listarClientes, listarServicios } from '../../api/servicios';
-import { KpiCard } from '../../components/ui/KpiCard';
-import { Select } from '../../components/ui/Select';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
+import { resumenBi,catalogosBi,estadoBi,sincronizarBi,embedBi } from '../../api/bi';
 import { Button } from '../../components/ui/Button';
 import GraficoLineas from './GraficoLineas';
 import GraficoDona from './GraficoDona';
-import TablaDesempeno from './TablaDesempeno';
+import { MetasBi } from './MetasBi';
 import './DashboardBIPage.css';
-import { formatearIndicador } from '../../utils/indicadores';
-
-const PERIODOS = [
-  { valor: '7',  label: 'Últimos 7 días' },
-  { valor: '30', label: 'Últimos 30 días' },
-  { valor: '90', label: 'Últimos 90 días' },
-];
-
-export default function DashboardBIPage() {
-  const [periodo, setPeriodo] = useState('30');
-  const [clienteId, setClienteId] = useState('');
-  const [servicioId, setServicioId] = useState('');
-  const [compararPeriodo, setCompararPeriodo] = useState(false);
-  const [indicadores, setIndicadores] = useState(null);
-  const [evolucion, setEvolucion] = useState([]);
-  const [porTipo, setPorTipo] = useState([]);
-  const [desempeno, setDesempeno] = useState([]);
-  const [embedUrl, setEmbedUrl] = useState('');
-  const [clientes, setClientes] = useState([]);
-  const [servicios, setServicios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const { informar } = useModal();
-
-  const hayFiltrosActivos = clienteId !== '' || servicioId !== '' || periodo !== '30' || compararPeriodo;
-
-  const restablecerFiltros = () => {
-    setPeriodo('30');
-    setClienteId('');
-    setServicioId('');
-    setCompararPeriodo(false);
-  };
-
-  useEffect(() => {
-    let activo = true;
-    (async () => {
-      try {
-        const params = { periodo };
-        if (clienteId) params.clienteId = clienteId;
-        if (servicioId) params.servicioId = servicioId;
-
-        const [ind, evol, tipo, desemp, embed, listClientes, listServicios] = await Promise.all([
-          indicadoresBi(params),
-          evolucionCumplimiento(),
-          incidenciasPorTipo(),
-          desempenoPorServicio(),
-          embedBi().catch(() => ({ url: '' })),
-          listarClientes(),
-          listarServicios(),
-        ]);
-        if (activo) {
-          setIndicadores(ind);
-          setEvolucion(evol);
-          setPorTipo(tipo);
-          setDesempeno(desemp);
-          setEmbedUrl(embed?.url || '');
-          setClientes(listClientes);
-          setServicios(listServicios);
-        }
-      } catch (err) {
-        if (activo) informar('Error', err.message, 'error');
-      } finally {
-        if (activo) setCargando(false);
-      }
-    })();
-    return () => {
-      activo = false;
-    };
-  }, [periodo, clienteId, servicioId, informar]);
-
-  return (
-    <div className="fade-in">
-      <div className="pagina-encabezado">
-        <div>
-          <h1 className="pagina-titulo">Dashboard BI</h1>
-          <p className="pagina-subtitulo">Indicadores operativos y análisis histórico en tiempo real</p>
-        </div>
-        <div className="pagina-acciones">
-          <Select id="filtro-periodo-bi" nombre="periodo" valor={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}>
-            {PERIODOS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
-          </Select>
-          <Select id="filtro-cliente-bi" nombre="clienteId" valor={clienteId}
-            onChange={(e) => setClienteId(e.target.value)} placeholder="Todos los clientes">
-            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </Select>
-          <Select id="filtro-servicio-bi" nombre="servicioId" valor={servicioId}
-            onChange={(e) => setServicioId(e.target.value)} placeholder="Todos los servicios">
-            {servicios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </Select>
-          <Button
-            variante={compararPeriodo ? 'primario' : 'secundario'}
-            onClick={() => setCompararPeriodo(!compararPeriodo)}
-          >
-            {compararPeriodo ? 'Comparando periodo' : 'Comparar periodo'}
-          </Button>
-          {hayFiltrosActivos && (
-            <Button variante="secundario" onClick={restablecerFiltros}>
-              Restablecer filtros
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="grilla-kpi grilla-kpi-4">
-        <KpiCard
-          titulo="Cumplimiento turnos"
-          valor={formatearIndicador(indicadores?.cumplimiento_turnos, '%')}
-          variacion={compararPeriodo ? '+2.4%' : null}
-          color="primario"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Cumplimiento servicios"
-          valor={formatearIndicador(indicadores?.cumplimiento_servicios, '%')}
-          variacion={compararPeriodo ? '+1.1%' : null}
-          color="exito"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Incidencias abiertas"
-          valor={indicadores?.incidencias_abiertas}
-          variacion={compararPeriodo ? '-12.5%' : null}
-          color="peligro"
-          cargando={cargando}
-        />
-        <KpiCard
-          titulo="Tiempo prom. atención"
-          valor={formatearIndicador(indicadores?.tiempo_promedio_atencion, ' min')}
-          variacion={compararPeriodo ? '-5.0%' : null}
-          color="advertencia"
-          cargando={cargando}
-        />
-      </div>
-
-      <div className="grilla-contenido grilla-2-1">
-        <div className="tarjeta">
-          <h3 className="tarjeta-titulo">Evolución del cumplimiento</h3>
-          <p className="tarjeta-subtitulo">Turnos y servicios por semana</p>
-          <GraficoLineas datos={evolucion} cargando={cargando} />
-        </div>
-        <div className="tarjeta">
-          <h3 className="tarjeta-titulo">Incidencias por tipo</h3>
-          <GraficoDona datos={porTipo} cargando={cargando} />
-        </div>
-      </div>
-
-      <div className="tarjeta" style={{ marginBottom: 20 }}>
-        <h3 className="tarjeta-titulo">Desempeño por servicio</h3>
-        <TablaDesempeno datos={desempeno} cargando={cargando} />
-      </div>
-
-      {embedUrl ? (
-        <div className="tarjeta" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-          <h3 className="tarjeta-titulo" style={{ padding: '16px 20px 0' }}>Informe Power BI</h3>
-          <iframe
-            title="Power BI Report"
-            src={embedUrl}
-            width="100%"
-            height="600"
-            style={{ border: 'none', display: 'block', marginTop: 12 }}
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <div className="tarjeta embed-placeholder">
-          <p style={{ marginBottom: 12 }}>El informe de Power BI no está configurado en el servidor.</p>
-          <button
-            type="button"
-            className="accion-btn"
-            onClick={() => informar('Power BI no configurado', 'La variable de entorno POWER_BI_EMBED_URL no está configurada en el backend. Configure dicha variable en .env para visualizar el informe embebido.', 'advertencia')}
-          >
-            Verificar configuración
-          </button>
-        </div>
-      )}
-    </div>
-  );
+const formato=(v,u)=>v===null||v===undefined?'—':Number(v).toLocaleString('es-PE',{maximumFractionDigits:u==='cantidad'?0:1})+(u==='%'?' %':u==='min'?' min':u==='por_1000'?' / 1.000':'');
+const hora=v=>v?new Date(v).toLocaleString('es-PE',{timeZone:'America/Lima'}):'Pendiente';
+const SERIES=[{campo:'cobertura',nombre:'Cobertura',color:'#3b82f6'},{campo:'ausentismo',nombre:'Ausentismo',color:'#a78bfa'},{campo:'tardanzas',nombre:'Tardanzas',color:'#f59e0b'}];
+export default function DashboardBIPage(){
+  const {usuario}=useAuth();
+  const puedeGestionar=['administrador','jefe_operaciones'].includes(usuario?.rol);
+  const [f,setF]=useState({periodo:'30',clienteId:'',servicioId:'',sedeId:'',supervisorId:''});
+  const [data,setData]=useState(null),[catalogo,setCatalogo]=useState({clientes:[],servicios:[],sedes:[],supervisores:[]}),[estado,setEstado]=useState(null);
+  const [vista,setVista]=useState('indicadores'),[recarga,setRecarga]=useState(0),[cargando,setCargando]=useState(true),[sincronizando,setSincronizando]=useState(false),[error,setError]=useState(''),[mensaje,setMensaje]=useState(''),[embed,setEmbed]=useState('');
+  const ultimo=useRef(null);
+  useEffect(()=>{
+    let activo=true;
+    Promise.resolve().then(async()=>{if(activo)setCargando(true);try{const [r,c,s,e]=await Promise.all([resumenBi(f),catalogosBi(),estadoBi(),embedBi()]);if(activo){setData(r);setCatalogo(c);setEstado(s);ultimo.current=s.ultima_carga_en;setEmbed(e.url||'');setError('');}}catch(e){if(activo)setError(e.message);}finally{if(activo)setCargando(false);}});
+    return()=>{activo=false;};
+  },[f,recarga]);
+  useEffect(()=>{
+    let activo=true;
+    const timer=setInterval(()=>estadoBi().then(s=>{if(activo){setEstado(s);if(s.ultima_carga_en!==ultimo.current){ultimo.current=s.ultima_carga_en;setRecarga(n=>n+1);}}}).catch(()=>{}),30000);
+    return()=>{activo=false;clearInterval(timer);};
+  },[]);
+  const sincronizar=async()=>{setSincronizando(true);setError('');setMensaje('');try{const r=await sincronizarBi();setMensaje(r.en_curso?'Ya hay una sincronización en curso. Los indicadores cambiarán al finalizar.':'Datos sincronizados correctamente.');setRecarga(n=>n+1);return r;}catch(e){setError(e.message);throw e;}finally{setSincronizando(false);}};
+  const indicador=codigo=>data?.indicadores.find(i=>i.codigo===codigo);
+  const filtro=(campo,titulo,items)=><label>{titulo}<select aria-label={titulo} className="campo-input" value={f[campo]} onChange={e=>setF({...f,[campo]:e.target.value})}><option value="">Todos</option>{items.map(x=><option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>;
+  return <div className="pagina-bi">
+    <header className="bi-encabezado"><div><h1 className="pagina-titulo">Dashboard BI</h1><p className="pagina-subtitulo">Indicadores operativos e históricos · última sincronización completada</p></div>{puedeGestionar&&<Button cargando={sincronizando} disabled={estado?.ultima?.estado==='ejecutando'} onClick={()=>sincronizar().catch(()=>{})}>Sincronizar datos</Button>}</header>
+    <section className="bi-estado"><div><b>{estado?.ultima?.estado==='ejecutando'?'Sincronización en curso':data?.sincronizado?'Datos disponibles':'Primera carga pendiente'}</b><span>Última carga: {hora(estado?.ultima_carga_en)}</span></div><div><span>Actualización automática cada 60 minutos</span><small>Próxima: {hora(estado?.proxima_carga_en)}</small></div></section>
+    {error&&<p className="ejecucion-alerta error" role="alert">{error}</p>}{mensaje&&<p className="ejecucion-alerta exito" role="status">{mensaje}</p>}
+    <nav className="bi-pestanas"><button type="button" className={vista==='indicadores'?'activa':''} onClick={()=>setVista('indicadores')}>Indicadores</button>{puedeGestionar&&<button type="button" className={vista==='metas'?'activa':''} onClick={()=>setVista('metas')}>Configurar metas</button>}</nav>
+    {vista==='metas'&&puedeGestionar?<MetasBi onSincronizar={sincronizar}/>:<>
+      <section className="tarjeta bi-filtros"><label>Periodo<select aria-label="Periodo BI" className="campo-input" value={f.periodo} onChange={e=>setF({...f,periodo:e.target.value})}>{[7,30,90,180].map(d=><option key={d} value={d}>Últimos {d} días</option>)}</select></label>{filtro('servicioId','Servicio',catalogo.servicios)}{filtro('clienteId','Cliente',catalogo.clientes)}{filtro('sedeId','Sede',catalogo.sedes)}{usuario?.rol!=='supervisor'&&filtro('supervisorId','Supervisor',catalogo.supervisores)}</section>
+      {!cargando&&!data?.sincronizado?<section className="tarjeta"><h2>Aún no hay una carga completada</h2><p>Los registros operativos aparecerán aquí después de la primera sincronización.</p></section>:<>
+        <div className="bi-kpis">{['I00','I01','I03','I04'].map(c=>{const i=indicador(c);return <article className="tarjeta" key={c}><span>{i?.nombre||c}</span><strong>{cargando?'…':formato(i?.valor,i?.unidad)}</strong><small>{i?.variacion==null?'Sin periodo anterior comparable':(i.variacion>0?'+':'')+Number(i.variacion).toFixed(1)+(i.unidad==='%'?' pp':'')+' frente al periodo anterior'}</small></article>;})}</div>
+        {(data?.calidad?.asistenciasPendientes>0||data?.calidad?.plazosPendientes>0)&&<p className="ejecucion-alerta">Información pendiente de validar: {data.calidad.asistenciasPendientes} asistencias y {data.calidad.plazosPendientes} plazos de incidencia.</p>}
+        <div className="grilla-contenido grilla-2-1"><section className="tarjeta"><h2>Evolución de indicadores</h2><p className="tarjeta-subtitulo">Últimos seis meses disponibles · porcentajes</p><GraficoLineas datos={(data?.evolucion||[]).map(e=>({...e,semana:e.mes+'-01'}))} series={SERIES} cargando={cargando}/></section><section className="tarjeta"><h2>Incidencias por tipo</h2><GraficoDona datos={data?.tipos||[]} cargando={cargando}/></section></div>
+        <section className="tarjeta"><h2>Indicadores del periodo</h2><p className="tarjeta-subtitulo">{data?.periodo?.inicio} al {data?.periodo?.fin} · comparación con {data?.periodo?.anteriorInicio} al {data?.periodo?.anteriorFin}</p><div className="bi-tabla-scroll"><table className="bi-tabla"><thead><tr><th>Código</th><th>Indicador</th><th>Resultado</th><th>Meta</th><th>Variación</th><th>Estado</th></tr></thead><tbody>{(data?.indicadores||[]).map(i=><tr key={i.codigo}><td>{i.codigo}</td><td><b>{i.nombre}</b><small>{i.formula}</small></td><td>{formato(i.valor,i.unidad)}</td><td>{i.meta===null?'Sin meta':(i.sentido==='mayor'?'≥ ':'≤ ')+formato(i.meta,i.unidad)}</td><td>{i.variacion===null?'—':(i.variacion>0?'+':'')+(i.unidad==='%'?Number(i.variacion).toLocaleString('es-PE',{maximumFractionDigits:1}):formato(i.variacion,i.unidad))+(i.unidad==='%'?' pp':'')}</td><td>{i.valor===null?'Sin casos':i.cumple===null?'Informativo':i.cumple?'En meta':'Requiere atención'}</td></tr>)}</tbody></table></div></section>
+        <section className="tarjeta"><h2>Cobertura por servicio</h2><div className="bi-tabla-scroll"><table className="bi-tabla"><thead><tr><th>Servicio</th><th>Turnos exigibles</th><th>Descubiertos</th><th>Cobertura</th></tr></thead><tbody>{(data?.servicios||[]).map(s=><tr key={s.id+'-'+s.servicio}><td>{s.servicio}</td><td>{s.turnos}</td><td>{s.descubiertos}</td><td>{formato(s.cobertura,'%')}</td></tr>)}</tbody></table></div></section>
+      </>}
+      {embed?<section className="tarjeta"><h2>Informe Power BI</h2><iframe title="Informe Power BI" src={embed} width="100%" height="600" style={{border:0}} allowFullScreen/></section>:<p className="bi-nota">El informe de Power BI se mostrará aquí cuando se configure su publicación.</p>}
+    </>}
+  </div>;
 }

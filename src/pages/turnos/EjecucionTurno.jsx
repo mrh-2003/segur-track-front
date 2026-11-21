@@ -1,3 +1,4 @@
+import { RevisionReporte } from './RevisionReporte';
 import { useEffect, useRef, useState } from 'react';
 import { get, post, patch } from '../../api/cliente';
 import { Button } from '../../components/ui/Button';
@@ -23,13 +24,13 @@ export function EjecucionTurno({turno,usuario,onActualizar}) {
   const ejecutar=async(fn,exito='Registro guardado correctamente.')=>{
     setOcupado(true);setError('');setMensaje('');
     try{
-      await fn();setDatos(await get('/datos-kpi/turnos/'+turno.id));setSeleccion(null);setResultado('');setMomento('');setArchivos([]);subidas.current.clear();setMensaje(exito);await onActualizar?.();
-    }catch(e){setError(e.message);}finally{setOcupado(false);setProgreso('');}
+      await fn();setDatos(await get('/datos-kpi/turnos/'+turno.id));setSeleccion(null);setResultado('');setMomento('');setArchivos([]);subidas.current.clear();setMensaje(exito);await onActualizar?.();return true;
+    }catch(e){setError(e.message);return false;}finally{setOcupado(false);setProgreso('');}
   };
   const filas=datos?[...datos.obligaciones.map(o=>({...o,grupo:'obligacion'})),...datos.rondas.map(r=>({...r,tipo:'ronda',descripcion:r.ruta,fecha_limite:r.fecha_programada,resultado:r.observaciones,grupo:'ronda'}))]:[];
   const completadas=filas.filter(r=>r.fecha_completada).length;
-  const pendientes=filas.length-completadas;
-  const abrir=(r)=>{setSeleccion(r);setResultado('');setMomento('');setArchivos([]);setError('');setMensaje('');subidas.current.clear();requestAnimationFrame(()=>formulario.current?.scrollIntoView({behavior:'smooth',block:'nearest'}));};
+  const pendientes=filas.filter(r=>!r.fecha_completada||(r.tipo==='reporte'&&r.estado_revision!=='aprobado')).length;
+  const abrir=(r)=>{setSeleccion(r);setResultado(r.estado_revision==='observado'?r.resultado||'':'');setMomento('');setArchivos([]);setError('');setMensaje('');subidas.current.clear();requestAnimationFrame(()=>formulario.current?.scrollIntoView({behavior:'smooth',block:'nearest'}));};
   const guardar=(e)=>{
     e.preventDefault();
     if(!datos.puede_registrar){setError(datos.motivo_bloqueo);return;}
@@ -46,7 +47,7 @@ export function EjecucionTurno({turno,usuario,onActualizar}) {
     },seleccion.tipo==='reporte'?'Reporte entregado correctamente.':'Ejecución registrada correctamente.');
   };
   const editor = r => seleccion?.id===r.id && seleccion?.grupo===r.grupo && <form ref={formulario} className="ejecucion-form ejecucion-registro" onSubmit={guardar}>
-    <div className="ejecucion-form-titulo"><h4>{r.tipo==='reporte'?'Entregar reporte':'Registrar ejecución'}</h4><span>Fecha y hora en Lima</span></div>
+    <div className="ejecucion-form-titulo"><h4>{r.tipo==='reporte'?(r.estado_revision==='observado'?'Corregir y reenviar':'Entregar reporte'):'Registrar ejecución'}</h4><span>Fecha y hora en Lima</span></div>
     <label>{r.tipo==='reporte'?'Contenido del reporte':'Resultado y observaciones'}<textarea className="campo-input" required={r.tipo==='reporte'} minLength={r.tipo==='reporte'?3:undefined} maxLength={10000} placeholder={r.tipo==='reporte'?'Describa las novedades y acciones realizadas…':'Describa el resultado de esta actividad…'} value={resultado} disabled={ocupado} onChange={e=>setResultado(e.target.value)}/></label>
     <CargaImagenes archivos={archivos} onCambiar={setArchivos} disabled={ocupado}/>
     {gestor&&<details className="ejecucion-fecha"><summary>Registrar una fecha real anterior</summary><label>Fecha real de ejecución (Lima)<input className="campo-input" type="datetime-local" min={new Date(new Date(datos.inicio_programado).getTime()-5*3600000).toISOString().slice(0,16)} max={new Date(new Date(datos.corte).getTime()-5*3600000).toISOString().slice(0,16)} value={momento} disabled={ocupado} onChange={e=>setMomento(e.target.value)}/></label></details>}
@@ -72,7 +73,8 @@ export function EjecucionTurno({turno,usuario,onActualizar}) {
             <div className="ejecucion-item-fechas"><span>Plazo · {fecha(r.fecha_limite)}</span>{r.fecha_completada&&<span>Registro · {fecha(r.fecha_completada)}</span>}</div>
             {r.fecha_completada&&r.resultado&&<p className="ejecucion-resultado">{r.resultado}</p>}
             {!!fotos.length&&<div className="ejecucion-fotos">{fotos.map((src,i)=><a href={src} key={src} target="_blank" rel="noreferrer"><img src={src} alt={'Evidencia '+(i+1)+' de '+r.descripcion}/></a>)}</div>}
-            {!r.fecha_completada&&<div className="ejecucion-acciones"><Button tipo="button" disabled={ocupado||!datos.puede_registrar} onClick={()=>abrir(r)}>{r.tipo==='reporte'?'Entregar reporte':'Registrar ejecución'}</Button>{gestor&&<Button tipo="button" variante="fantasma" disabled={ocupado} onClick={()=>ejecutar(()=>patch('/datos-kpi/turnos/'+turno.id+'/'+r.id,{tipo:r.grupo,accion:'anular'}),'Obligación anulada.')}>Anular obligación</Button>}</div>}
+            {r.tipo==='reporte'&&<RevisionReporte reporte={r} historial={(datos.revisiones||[]).filter(h=>h.reporte_id===r.id)} gestor={gestor} ocupado={ocupado} onRevisar={d=>ejecutar(()=>patch('/datos-kpi/turnos/'+turno.id+'/'+r.id+'/revision',d),'Revisión registrada correctamente.')}/>}
+            {(!r.fecha_completada||(r.tipo==='reporte'&&r.estado_revision==='observado'))&&<div className="ejecucion-acciones"><Button tipo="button" disabled={ocupado||!datos.puede_registrar} onClick={()=>abrir(r)}>{r.tipo==='reporte'?(r.estado_revision==='observado'?'Corregir y reenviar':'Entregar reporte'):'Registrar ejecución'}</Button>{gestor&&<Button tipo="button" variante="fantasma" disabled={ocupado} onClick={()=>ejecutar(()=>patch('/datos-kpi/turnos/'+turno.id+'/'+r.id,{tipo:r.grupo,accion:'anular'}),'Obligación anulada.')}>Anular obligación</Button>}</div>}
           </div>{editor(r)}
         </article>;
       })}
