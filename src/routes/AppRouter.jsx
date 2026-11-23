@@ -27,7 +27,7 @@ export function AppRouter() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/" element={operador?<MonitorOperador />:usuario?.rol==='supervisor'?<MonitorMulticriterioPage />:<InicioPage />} />
+            <Route path="/" element={operador?<MonitorOperador />:<InicioPage />} />
             <Route path="/servicios" element={operador?<MonitorOperador />:<ServiciosPage />} />
             <Route path="/turnos" element={<TurnosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />

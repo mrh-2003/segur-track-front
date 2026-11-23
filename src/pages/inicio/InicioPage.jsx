@@ -46,7 +46,9 @@ export default function InicioPage() {
   const { informar } = useModal();
   const { usuario } = useAuth();
 
-  const esAdmin = usuario?.rol === 'administrador';
+  const esSupervisor = usuario?.rol === 'supervisor';
+  const esGestor = ['administrador','jefe_operaciones','supervisor'].includes(usuario?.rol);
+  const accesos = esSupervisor ? [{label:'Mi personal',ruta:'/personal',modal:false,icono:'personal'},...ACCESOS.filter(a=>a.ruta!=='/personal')] : ACCESOS;
   const esOperador = usuario?.rol === 'operador';
 
   useEffect(() => {
@@ -73,18 +75,18 @@ export default function InicioPage() {
     return () => {
       activo = false;
     };
-  }, [informar, esOperador]);
+  }, [informar, esOperador, usuario?.id, usuario?.rol]);
 
   return (
     <div className="fade-in">
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Inicio</h1>
-          <p className="pagina-subtitulo">Resumen operativo del día</p>
+          <p className="pagina-subtitulo">{esSupervisor?'Resumen de tus servicios y agentes asignados':'Resumen operativo del día'}</p>
         </div>
       </div>
 
-      {!esOperador && <DisponibilidadPanel />}
+      {['administrador','jefe_operaciones'].includes(usuario?.rol) && <DisponibilidadPanel />}
       {['administrador', 'jefe_operaciones'].includes(usuario?.rol) && (
         <ImportarExcel
           onCompletado={() =>
@@ -96,7 +98,7 @@ export default function InicioPage() {
       )}
       <div className="grilla-kpi grilla-kpi-4">
         <KpiCard
-          titulo="Personal activo"
+          titulo={esSupervisor?'Agentes a mi cargo':'Personal activo'}
           valor={resumen?.personal_activo}
           variacion={resumen?.personal_nuevo_semana}
           color="primario"
@@ -119,7 +121,7 @@ export default function InicioPage() {
         <KpiCard
           titulo="T. prom. atención"
           valor={
-            resumen?.tiempo_prom_atencion
+            resumen?.tiempo_prom_atencion != null
               ? `${resumen.tiempo_prom_atencion} min`
               : null
           }
@@ -128,18 +130,18 @@ export default function InicioPage() {
         />
       </div>
 
-      <div className={`grilla-contenido ${esAdmin ? 'grilla-2-1' : ''}`}>
+      <div className={`grilla-contenido ${esGestor ? 'grilla-2-1' : ''}`}>
         <div className="tarjeta">
           <h3 className="tarjeta-titulo">Actividad operativa</h3>
           <p className="tarjeta-subtitulo">Eventos de las últimas 24 horas</p>
           <GraficoActividadOperativa datos={actividad} cargando={cargando} />
         </div>
 
-        {esAdmin && (
+        {esGestor && (
           <div className="tarjeta">
             <h3 className="tarjeta-titulo">Accesos rápidos</h3>
             <div className="accesos-grid">
-              {ACCESOS.map((a) => (
+              {accesos.map((a) => (
                 <button
                   key={a.ruta}
                   className="acceso-btn"
