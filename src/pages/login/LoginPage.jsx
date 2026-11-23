@@ -165,7 +165,7 @@ export default function LoginPage() {
             tipo="submit"
             variante="primario"
             cargando={cargando}
-            disabled={cargando}
+            disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}
             tamano="lg"
             style={{ width: '100%', justifyContent: 'center' }}
           >

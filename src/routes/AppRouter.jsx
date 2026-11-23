@@ -1,3 +1,5 @@
+import MonitorOperador from '../pages/monitor-multicriterio/MonitorOperador';
+import { useAuth } from '../hooks/useAuth';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { MainLayout } from '../components/layout/MainLayout';
@@ -16,6 +18,8 @@ import MonitorOperativoPage from '../pages/monitor-operativo/MonitorOperativoPag
 import AnalisisHistoricoPage from '../pages/analisis-historico/AnalisisHistoricoPage';
 
 export function AppRouter() {
+  const {usuario}=useAuth();
+  const operador=usuario?.rol==='operador';
   return (
     <BrowserRouter>
       <Routes>
@@ -23,21 +27,21 @@ export function AppRouter() {
 
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/" element={<InicioPage />} />
-            <Route path="/servicios" element={<ServiciosPage />} />
+            <Route path="/" element={operador?<MonitorOperador />:usuario?.rol==='supervisor'?<MonitorMulticriterioPage />:<InicioPage />} />
+            <Route path="/servicios" element={operador?<MonitorOperador />:<ServiciosPage />} />
             <Route path="/turnos" element={<TurnosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />
-            <Route path="/monitor-operativo" element={<MonitorOperativoPage />} />
+            <Route path="/monitor-operativo" element={operador?<MonitorOperador />:<MonitorOperativoPage />} />
 
+            <Route path="/monitor-multicriterio" element={operador?<MonitorOperador />:<MonitorMulticriterioPage />} />
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones', 'supervisor']} />}>
+              <Route path="/personal" element={<PersonalPage />} />
               <Route path="/sedes" element={<SedesPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
               <Route path="/dashboard-bi" element={<DashboardBIPage />} />
-              <Route path="/monitor-multicriterio" element={<MonitorMulticriterioPage />} />
             </Route>
 
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones']} />}>
-              <Route path="/personal" element={<PersonalPage />} />
               <Route path="/reportes" element={<ReportesPage />} />
               <Route path="/analisis-historico" element={<AnalisisHistoricoPage />} />
             </Route>

@@ -199,7 +199,7 @@ function Configuracion({ criterios, onGuardar }) {
         las evaluaciones guardadas mantienen su configuración.
       </p>
       {error && <p role="alert">{error}</p>}
-      <Button tipo="submit" disabled={ocupado || Math.abs(suma - 1) > 0.000001}>
+      <Button tipo="submit" disabled={ocupado || Math.abs(suma - 1) > 0.000001} motivoDeshabilitado={ocupado ? 'Espere a que termine el guardado.' : 'Ajuste los pesos de los criterios para que sumen exactamente el 100%. Suma actual: '+(suma*100).toFixed(1)+'%.'}>
         Guardar configuración
       </Button>
     </form>
@@ -1025,7 +1025,7 @@ export default function MonitorMulticriterioPage() {
         </div>
         <Button
           tipo="button"
-          disabled={guardando || cargando || !data}
+          disabled={guardando || cargando || !data} motivoDeshabilitado={guardando ? 'Espere a que termine el guardado de la evaluación.' : cargando ? 'Espere mientras se calcula la evaluación.' : 'Primero cargue una evaluación válida antes de guardarla.'}
           title="Conserva una instantánea de los filtros, criterios y puntajes para auditoría"
           onClick={guardar}
         >

@@ -29,8 +29,10 @@ const ymd = (d) =>
 const desplazar = (fecha, n) =>
   ymd(new Date(new Date(fecha + 'T12:00:00-05:00').getTime() + n * 86400000));
 export default function TurnosPage() {
-  const [desde, setDesde] = useState(() => ymd(new Date())),
-    [hasta, setHasta] = useState(() => desplazar(ymd(new Date()), 6)),
+  const fechaEnlace=new URLSearchParams(window.location.search).get('fecha');
+  const fechaInicial=/^\d{4}-\d{2}-\d{2}$/.test(fechaEnlace||'')?fechaEnlace:ymd(new Date());
+  const [desde, setDesde] = useState(() => fechaInicial),
+    [hasta, setHasta] = useState(() => desplazar(fechaInicial, 6)),
     [vista, setVista] = useState('calendario'),
     [estado, setEstado] = useState(''),
     [sede, setSede] = useState(''),
@@ -46,6 +48,7 @@ export default function TurnosPage() {
   const { usuario } = useAuth(),
     { abrirModal, cerrarModal, informar, confirmar } = useModal(),
     location = useLocation();
+  useEffect(()=>{if(!fechaEnlace)return;const timer=setTimeout(()=>{setDesde(fechaInicial);setHasta(desplazar(fechaInicial,6));},0);return()=>clearTimeout(timer);},[fechaEnlace,fechaInicial]);
   const gestor = ['administrador', 'jefe_operaciones', 'supervisor'].includes(
     usuario?.rol
   );
@@ -75,8 +78,7 @@ export default function TurnosPage() {
     };
   }, [cargar]);
   useEffect(() => {
-    if (gestor)
-      catalogosOperativos()
+    catalogosOperativos()
         .then((c) => {
           setCatalogo(c);
           setServicios(c.servicios);
@@ -209,9 +211,9 @@ export default function TurnosPage() {
     <div className="fade-in">
       <div className="pagina-encabezado">
         <div>
-          <h1 className="pagina-titulo">Turnos</h1>
+          <h1 className="pagina-titulo">{gestor ? 'Turnos' : 'Mis turnos'}</h1>
           <p className="pagina-subtitulo">
-            Programación, asistencia, cobertura y trazabilidad
+            {gestor ? 'Programación, asistencia, cobertura y trazabilidad' : 'Consulta tus asignaciones e historial por sede, estado y fecha'}
           </p>
         </div>
         {gestor && (

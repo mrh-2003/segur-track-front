@@ -1,3 +1,4 @@
+import {ControlConAyuda} from '../../components/ui/AyudaControl';
 import { PlanOperativoServicio } from './PlanOperativoServicio';
 import { turnosServicio } from '../../api/operaciones';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -613,7 +614,7 @@ export default function ModalDetalleOperativo({
                     variante="secundario"
                     tamano="sm"
                     onClick={() => setMostrarAsignarPersonal(false)}
-                    disabled={cargandoAccion}
+                    disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   >
                     Cancelar
                   </Button>
@@ -622,7 +623,7 @@ export default function ModalDetalleOperativo({
                     variante="primario"
                     tamano="sm"
                     cargando={cargandoAccion}
-                    disabled={!personalAAsignarId}
+                    disabled={!personalAAsignarId} motivoDeshabilitado={"Seleccione una persona disponible en el listado antes de asignarla al servicio."}
                   >
                     Confirmar asignación
                   </Button>
@@ -673,7 +674,7 @@ export default function ModalDetalleOperativo({
                     >
                       <Badge valor={p.estado} />
                       {esSupervisorOAdmin && (
-                        <button
+                        <ControlConAyuda as="button"
                           type="button"
                           className="btn-link-peligro"
                           style={{
@@ -691,10 +692,10 @@ export default function ModalDetalleOperativo({
                             )
                           }
                           title="Retirar asignación"
-                          disabled={cargandoAccion}
+                          disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                         >
                           Retirar
-                        </button>
+                        </ControlConAyuda>
                       )}
                     </div>
                   </div>
@@ -769,7 +770,7 @@ export default function ModalDetalleOperativo({
                     variante="secundario"
                     tamano="sm"
                     onClick={() => setMostrarFormReq(false)}
-                    disabled={cargandoAccion}
+                    disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   >
                     Cancelar
                   </Button>
@@ -805,14 +806,14 @@ export default function ModalDetalleOperativo({
                     )}
                     {esSupervisorOAdmin && (
                       <div className="req-pie">
-                        <button
+                        <ControlConAyuda as="button"
                           type="button"
                           className="btn-link-peligro"
                           onClick={() => handleEliminarRequerimiento(r.id)}
-                          disabled={cargandoAccion}
+                          disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                         >
                           Eliminar requerimiento
-                        </button>
+                        </ControlConAyuda>
                       </div>
                     )}
                   </div>
@@ -887,7 +888,7 @@ export default function ModalDetalleOperativo({
                     variante="secundario"
                     tamano="sm"
                     onClick={() => setMostrarAsociarProt(false)}
-                    disabled={cargandoAccion}
+                    disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   >
                     Cancelar
                   </Button>
@@ -956,7 +957,7 @@ export default function ModalDetalleOperativo({
                     variante="secundario"
                     tamano="sm"
                     onClick={() => setMostrarCrearProt(false)}
-                    disabled={cargandoAccion}
+                    disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   >
                     Cancelar
                   </Button>
@@ -986,14 +987,14 @@ export default function ModalDetalleOperativo({
                         <strong className="protocolo-titulo">{p.nombre}</strong>
                       </div>
                       {esSupervisorOAdmin && (
-                        <button
+                        <ControlConAyuda as="button"
                           type="button"
                           className="btn-link-peligro"
                           onClick={() => handleDesasociarProtocolo(p.id)}
-                          disabled={cargandoAccion}
+                          disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                         >
                           Retirar protocolo
-                        </button>
+                        </ControlConAyuda>
                       )}
                     </div>
                     {p.descripcion && (
@@ -1212,15 +1213,15 @@ export default function ModalDetalleOperativo({
                               {formatearTamano(item.tamano)}
                             </span>
                           </div>
-                          <button
+                          <ControlConAyuda as="button"
                             type="button"
                             className="archivo-preview-btn-eliminar"
                             onClick={() => eliminarArchivoEvidencia(item.id)}
-                            disabled={cargandoAccion}
+                            disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                             title="Quitar imagen"
                           >
                             <Icono nombre="cerrar" tamano={14} />
-                          </button>
+                          </ControlConAyuda>
                         </div>
                       ))}
                     </div>
@@ -1240,7 +1241,7 @@ export default function ModalDetalleOperativo({
                     variante="secundario"
                     tamano="sm"
                     onClick={() => setMostrarFormEvidencia(false)}
-                    disabled={cargandoAccion}
+                    disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   >
                     Cancelar
                   </Button>
@@ -1249,7 +1250,7 @@ export default function ModalDetalleOperativo({
                     variante="primario"
                     tamano="sm"
                     cargando={cargandoAccion}
-                    disabled={archivosEvidencia.length === 0}
+                    disabled={archivosEvidencia.length === 0} motivoDeshabilitado={"Adjunte al menos una imagen de evidencia antes de guardar."}
                   >
                     Guardar evidencia
                   </Button>
@@ -1305,10 +1306,10 @@ export default function ModalDetalleOperativo({
                         Registrado por {ev.personal} • {ev.fecha_registro}
                       </span>
                       {esSupervisorOAdmin && (
-                        <button
+                        <ControlConAyuda as="button"
                           type="button"
                           className="btn-link-accion"
-                          disabled={cargandoAccion}
+                          disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                           onClick={() => {
                             setEvidenciaARevisar(ev);
                             setRevEstado(ev.estado_revision);
@@ -1316,7 +1317,7 @@ export default function ModalDetalleOperativo({
                           }}
                         >
                           Revisar evidencia
-                        </button>
+                        </ControlConAyuda>
                       )}
                     </div>
                     {ev.observacion && (
@@ -1391,15 +1392,15 @@ export default function ModalDetalleOperativo({
               <h3 id="modal-rev-titulo" className="modal-titulo">
                 Revisar evidencia
               </h3>
-              <button
+              <ControlConAyuda as="button"
                 type="button"
                 className="modal-cerrar"
                 onClick={() => setEvidenciaARevisar(null)}
                 aria-label="Cerrar"
-                disabled={cargandoAccion}
+                disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
               >
                 ✕
-              </button>
+              </ControlConAyuda>
             </div>
 
             <form
@@ -1502,7 +1503,7 @@ export default function ModalDetalleOperativo({
                   type="button"
                   variante="secundario"
                   onClick={() => setEvidenciaARevisar(null)}
-                  disabled={cargandoAccion}
+                  disabled={cargandoAccion} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                 >
                   Cancelar
                 </Button>

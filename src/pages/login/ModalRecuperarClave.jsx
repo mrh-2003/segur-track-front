@@ -82,7 +82,7 @@ export default function ModalRecuperarClave({ onExito, onCancelar, informar }) {
           requerido
         />
         <div className="form-pie">
-          <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>
+          <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>
             Cancelar
           </Button>
           <Button tipo="submit" variante="primario" cargando={cargando}>
@@ -122,7 +122,7 @@ export default function ModalRecuperarClave({ onExito, onCancelar, informar }) {
         requerido
       />
       <div className="form-pie">
-        <Button tipo="button" variante="secundario" onClick={() => setPaso(1)} disabled={cargando}>
+        <Button tipo="button" variante="secundario" onClick={() => setPaso(1)} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>
           Atrás
         </Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>

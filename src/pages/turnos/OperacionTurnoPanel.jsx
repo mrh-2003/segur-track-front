@@ -117,7 +117,7 @@ export default function OperacionTurnoPanel({ turno, usuario, onActualizar }) {
           </p>
           <Button
             tipo="submit"
-            disabled={ocupado || v.motivo.trim().length < 5}
+            disabled={ocupado || v.motivo.trim().length < 5} motivoDeshabilitado={ocupado ? 'Espere a que termine el guardado.' : 'Escriba un motivo de al menos 5 caracteres para validar o corregir la asistencia.'}
           >
             Guardar revisión
           </Button>

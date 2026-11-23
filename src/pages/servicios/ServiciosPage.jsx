@@ -38,7 +38,7 @@ export default function ServiciosPage() {
   const { cargando: cargandoAccion, ejecutar } = useAsync();
   const location = useLocation();
 
-  const esSupervisorOAdmin = usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones' || usuario?.rol === 'supervisor';
+  const esSupervisorOAdmin = usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones';
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -53,9 +53,9 @@ export default function ServiciosPage() {
 
       const [lista, res, listaClientes, listaPersonal, listaSedes] = await Promise.all([
         listarServicios(params),
-        resumenServicios(),
+        usuario?.rol==='operador' ? Promise.resolve(null) : resumenServicios(),
         listarClientes(),
-        listarPersonal({ estado: 'activo' }),
+        usuario?.rol==='operador' ? Promise.resolve([]) : listarPersonal({ estado: 'activo' }),
         listarSedes(),
       ]);
       setServicios(lista);
@@ -71,7 +71,7 @@ export default function ServiciosPage() {
     } finally {
       setCargando(false);
     }
-  }, [filtros, soloAsignados, usuario?.personalId, seleccionado]);
+  }, [filtros, soloAsignados, usuario?.personalId, usuario?.rol, seleccionado]);
 
   useEffect(() => {
     const t = setTimeout(cargar, filtros.q ? DEBOUNCE_MS : 0);
@@ -278,7 +278,7 @@ export default function ServiciosPage() {
 
         <DetalleRapido
           servicio={seleccionado}
-          onEditar={() => abrirFormulario(seleccionado)}
+          onEditar={esSupervisorOAdmin?() => abrirFormulario(seleccionado):undefined}
           onVerDetalleOperativo={() => abrirDetalleOperativo(seleccionado)}
         />
       </div>

@@ -21,6 +21,8 @@ import './PersonalPage.css';
 const DEBOUNCE_MS = 300;
 
 function useDatos() {
+  const {usuario}=useAuth();
+  const supervisor=usuario?.rol==='supervisor';
   const [personal, setPersonal] = useState([]);
   const [resumen, setResumen] = useState(null);
   const [sedes, setSedes] = useState([]);
@@ -32,7 +34,7 @@ function useDatos() {
     try {
       const [lista, res, listaSedes] = await Promise.all([
         listarPersonal({ q: filtros.q, estado: filtros.estado }),
-        resumenPersonal(),
+        supervisor?Promise.resolve(null):resumenPersonal(),
         listarSedes(),
       ]);
       setPersonal(lista);
@@ -41,7 +43,7 @@ function useDatos() {
     } finally {
       setCargando(false);
     }
-  }, [filtros]);
+  }, [filtros,supervisor]);
 
   useEffect(() => {
     const t = setTimeout(cargar, filtros.q ? DEBOUNCE_MS : 0);
@@ -201,19 +203,19 @@ export default function PersonalPage() {
       <div className="pagina-encabezado">
         <div>
           <h1 className="pagina-titulo">Personal</h1>
-          <p className="pagina-subtitulo">Gestión de agentes y supervisores</p>
+          <p className="pagina-subtitulo">{usuario?.rol==='supervisor'?'Agentes de tus servicios y sedes asignadas':'Gestión de agentes y supervisores'}</p>
         </div>
         <div className="pagina-acciones">
-          <Button variante="primario" onClick={() => abrirFormulario()}>+ Nuevo personal</Button>
+          {usuario?.rol!=='supervisor'&&<Button variante="primario" onClick={() => abrirFormulario()}>+ Nuevo personal</Button>}
         </div>
       </div>
 
-      <div className="grilla-kpi grilla-kpi-4" style={{ marginBottom: 24 }}>
+      {usuario?.rol!=='supervisor'&&<div className="grilla-kpi grilla-kpi-4" style={{ marginBottom: 24 }}>
         <KpiCard titulo="Total personal" valor={resumen?.total} color="primario" cargando={cargando} />
         <KpiCard titulo="Activos" valor={resumen?.activos} variacion={resumen?.personal_nuevo_semana} color="exito" cargando={cargando} />
         <KpiCard titulo="Inactivos" valor={resumen?.inactivos} color="advertencia" cargando={cargando} />
         <KpiCard titulo="Supervisores / Agentes" valor={resumen ? `${resumen.supervisores} / ${resumen.agentes}` : null} color="morado" cargando={cargando} />
-      </div>
+      </div>}
 
       <div className="tarjeta">
         <div className="personal-filtros">
@@ -237,7 +239,7 @@ export default function PersonalPage() {
         </div>
 
         <Table
-          columnas={columnas}
+          columnas={usuario?.rol==='supervisor'?columnas.filter(c=>c.llave!=='acciones'):columnas}
           datos={personal}
           cargando={cargando}
           vacio="No se encontró personal con los filtros seleccionados"

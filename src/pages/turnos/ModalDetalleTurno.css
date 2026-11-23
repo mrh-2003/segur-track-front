@@ -488,3 +488,5 @@
 .turno-flujo .detalle-turno-datos strong{display:block;font-size:13px}.turno-flujo .detalle-dato-etiqueta{display:block;margin-bottom:6px}
 .horario-personal{padding:16px 0}.horario-personal summary{cursor:pointer;font-weight:600}.horario-dias{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:16px}.horario-dias label{display:flex;align-items:center;gap:6px}
 @media(max-width:600px){.flujo-proxima{align-items:stretch;flex-direction:column}.turno-pasos li{font-size:10px}.turno-flujo .detalle-turno-datos{grid-template-columns:1fr}}
+
+.formulario-subaccion{scroll-margin-top:18px;padding:18px;border:1px solid var(--color-borde);border-radius:12px;background:var(--color-superficie);margin:16px 0}.formulario-subaccion:focus{outline:2px solid var(--color-primario);outline-offset:2px}.formulario-subaccion h3{margin:0 0 10px}.formulario-subaccion>.tarjeta-subtitulo{margin-bottom:14px}.formulario-subaccion>.campo,.formulario-subaccion>.selector-personal{margin-bottom:14px}

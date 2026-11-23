@@ -1,3 +1,4 @@
+import {ControlConAyuda} from '../../components/ui/AyudaControl';
 import { useState, useRef } from 'react';
 import { Icono } from '../../components/ui/Icono';
 import './InicioOperaciones.css';
@@ -52,13 +53,13 @@ export default function ImportarExcel({ onCompletado }) {
         <Button
           tipo="button"
           variante="secundario"
-          disabled={ocupado}
+          disabled={ocupado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
           onClick={() => ejecutar(descargarPlantilla)}
         >
           <Icono nombre="descargar" /> Plantilla
         </Button>
       </div>
-      <div className="importar-cuerpo"><button type="button" className="importar-selector" disabled={ocupado} onClick={() => selector.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => {e.preventDefault(); if(!ocupado) archivo(e.dataTransfer.files?.[0]);}}><span className="importar-subir"><Icono nombre="subir" tamano={24} /></span><span><strong>{nombreArchivo || 'Seleccionar archivo Excel'}</strong><small>{ocupado ? 'Validando archivo…' : 'Arrastra tu archivo aquí · XLSX hasta 8 MB'}</small></span><span className="importar-elegir">{nombreArchivo ? 'Cambiar' : 'Explorar'}</span></button>
+      <div className="importar-cuerpo"><ControlConAyuda as="button" type="button" className="importar-selector" disabled={ocupado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."} onClick={() => selector.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => {e.preventDefault(); if(!ocupado) archivo(e.dataTransfer.files?.[0]);}}><span className="importar-subir"><Icono nombre="subir" tamano={24} /></span><span><strong>{nombreArchivo || 'Seleccionar archivo Excel'}</strong><small>{ocupado ? 'Validando archivo…' : 'Arrastra tu archivo aquí · XLSX hasta 8 MB'}</small></span><span className="importar-elegir">{nombreArchivo ? 'Cambiar' : 'Explorar'}</span></ControlConAyuda>
           <input ref={selector} hidden
             type="file"
             accept=".xlsx"
@@ -118,7 +119,7 @@ export default function ImportarExcel({ onCompletado }) {
               />
               <Button
                 tipo="button"
-                disabled={ocupado || lote.errores.length > 0 || !!resultado}
+                disabled={ocupado || lote.errores.length > 0 || !!resultado} motivoDeshabilitado={ocupado ? 'Espere a que termine la validación o importación.' : lote.errores.length>0 ? 'Corrija los errores del archivo Excel y vuelva a cargarlo antes de importar.' : 'Este lote ya fue importado. Seleccione otro archivo para realizar una nueva importación.'}
                 onClick={() =>
                   ejecutar(async () => {
                     const r = await confirmarImportacion(lote.id);

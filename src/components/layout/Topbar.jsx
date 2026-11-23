@@ -1,3 +1,4 @@
+import Notificaciones from './Notificaciones';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -65,7 +66,7 @@ export function Topbar({ onToggleSidebar }) {
       setBuscando(true);
       try {
         const [pers, serv, inc] = await Promise.all([
-          listarPersonal({ q: termino }),
+          usuario?.rol==='operador' ? Promise.resolve([]) : listarPersonal({ q: termino }),
           listarServicios({ q: termino }),
           listarIncidencias({ q: termino }),
         ]);
@@ -83,7 +84,7 @@ export function Topbar({ onToggleSidebar }) {
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(t);
-  }, [busqueda]);
+  }, [busqueda, usuario?.rol]);
 
   useEffect(() => {
     const clickAfuera = (e) => {
@@ -226,6 +227,7 @@ export function Topbar({ onToggleSidebar }) {
       </div>
 
       <div className="topbar-derecha">
+        <Notificaciones />
         <button
           className="topbar-tema-btn"
           onClick={alternarTema}

@@ -1,4 +1,5 @@
 import './Button.css';
+import {AyudaControl} from './AyudaControl';
 
 function extraerTexto(nodo) {
   if (typeof nodo === 'string' || typeof nodo === 'number') return String(nodo);
@@ -37,18 +38,21 @@ export function Button({
   cargando = false,
   textoCargando,
   disabled = false,
+  motivoDeshabilitado,
   tipo = 'button',
   onClick,
   tamano = 'md',
   ...resto
 }) {
   const textoAMostrar = textoCargando || obtenerTextoCargando(children, tipo);
+  const motivo = cargando ? 'Espere a que termine la operación en curso.' : disabled ? motivoDeshabilitado : null;
 
   return (
-    <button
+    <AyudaControl motivo={motivo} estilo={resto.style?.width?{width:resto.style.width}:undefined}><button
       type={tipo}
       className={`btn btn-${variante} btn-${tamano} ${cargando ? 'btn-cargando' : ''}`}
       disabled={disabled || cargando}
+      data-motivo-deshabilitado={motivo||undefined}
       onClick={onClick}
       {...resto}
     >
@@ -56,6 +60,6 @@ export function Button({
       <span className={cargando ? 'btn-texto-cargando' : 'btn-contenido'}>
         {cargando ? textoAMostrar : children}
       </span>
-    </button>
+    </button></AyudaControl>
   );
 }

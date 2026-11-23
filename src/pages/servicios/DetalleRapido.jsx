@@ -59,14 +59,14 @@ export default function DetalleRapido({ servicio, onEditar, onVerDetalleOperativ
         >
           Detalle operativo y protocolos
         </Button>
-        <Button
+        {onEditar&&<Button
           variante="secundario"
           onClick={onEditar}
           tamano="sm"
           style={{ width: '100%', justifyContent: 'center' }}
         >
           Editar servicio
-        </Button>
+        </Button>}
       </div>
     </div>
   );

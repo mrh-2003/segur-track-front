@@ -1,8 +1,9 @@
+import {ControlConAyuda} from './AyudaControl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from './Button';
 import './CargaImagenes.css';
 
-export function CargaImagenes({ archivos, onCambiar, disabled = false }) {
+export function CargaImagenes({ archivos, onCambiar, motivoDeshabilitado, disabled = false }) {
   const input = useRef(null);
   const [error, setError] = useState('');
   const previews = useMemo(() => archivos.map(file => ({file,url:URL.createObjectURL(file)})), [archivos]);
@@ -24,14 +25,15 @@ export function CargaImagenes({ archivos, onCambiar, disabled = false }) {
       <span className="carga-imagenes-icono" aria-hidden="true">↥</span>
       <strong>Evidencias fotográficas</strong>
       <span>Arrastre sus imágenes aquí o selecciónelas desde su equipo.</span>
-      <Button tipo="button" variante="secundario" disabled={disabled} onClick={()=>input.current?.click()}>Seleccionar imágenes</Button>
+      <Button tipo="button" variante="secundario" disabled={disabled} motivoDeshabilitado={motivoDeshabilitado || 'Espere a que termine la carga de imágenes antes de modificarlas.'} onClick={()=>input.current?.click()}>Seleccionar imágenes</Button>
+      {disabled&&<small className="campo-bloqueo" role="status">{motivoDeshabilitado || 'Espere a que termine la carga de imágenes antes de modificarlas.'}</small>}
       <small>Hasta 6 imágenes · JPG, PNG o WEBP · 8 MB por imagen</small>
     </div>
     {error&&<p role="alert">{error}</p>}
     {!!previews.length&&<div className="carga-imagenes-previews">{previews.map((p,i)=><figure key={p.url}>
       <img src={p.url} alt={`Vista previa de ${p.file.name}`} />
       <figcaption title={p.file.name}>{p.file.name}</figcaption>
-      <button type="button" disabled={disabled} aria-label={`Quitar imagen ${i+1}`} onClick={()=>{onCambiar(archivos.filter((_,j)=>j!==i));setError('');}}>×</button>
+      <ControlConAyuda as="button" type="button" disabled={disabled} motivoDeshabilitado={motivoDeshabilitado || 'Espere a que termine la carga de imágenes antes de modificarlas.'} aria-label={`Quitar imagen ${i+1}`} onClick={()=>{onCambiar(archivos.filter((_,j)=>j!==i));setError('');}}>×</ControlConAyuda>
     </figure>)}</div>}
   </div>;
 }

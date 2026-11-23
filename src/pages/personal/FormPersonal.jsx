@@ -82,7 +82,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         {errores.diasLaborales && <p role="alert">{errores.diasLaborales}</p>}
       </details>
       <div className="form-pie">
-        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>

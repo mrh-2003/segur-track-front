@@ -147,19 +147,19 @@ export default function ModalPerfil({ usuario, onActualizado, onCancelar, inform
               label="Correo"
               nombre="correo"
               valor={usuario?.correo || ''}
-              disabled
+              disabled motivoDeshabilitado={"El correo identifica su cuenta y solo puede modificarlo la administración."}
             />
             <Input
               id="perfil-rol"
               label="Rol del sistema"
               nombre="rol"
               valor={usuario?.rol || ''}
-              disabled
+              disabled motivoDeshabilitado={"El rol lo asigna la administración; no se puede cambiar desde el perfil."}
             />
           </div>
 
           <div className="form-pie" style={{ marginTop: 20 }}>
-            <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={guardando}>
+            <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={guardando} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}>
               Cancelar
             </Button>
             <Button tipo="submit" variante="primario" cargando={guardando}>
@@ -207,7 +207,7 @@ export default function ModalPerfil({ usuario, onActualizado, onCancelar, inform
           </div>
 
           <div className="form-pie" style={{ marginTop: 20 }}>
-            <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={guardando}>
+            <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={guardando} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}>
               Cancelar
             </Button>
             <Button tipo="submit" variante="primario" cargando={guardando}>

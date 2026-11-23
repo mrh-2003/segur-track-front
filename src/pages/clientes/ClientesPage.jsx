@@ -1,3 +1,4 @@
+import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
@@ -16,6 +17,8 @@ import FormCliente from './FormCliente';
 const DEBOUNCE_MS = 300;
 
 export default function ClientesPage() {
+  const {usuario}=useAuth();
+  const puedeGestionar=['administrador','jefe_operaciones'].includes(usuario?.rol);
   const [clientes, setClientes] = useState([]);
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -114,7 +117,7 @@ export default function ClientesPage() {
           <h1 className="pagina-titulo">Clientes</h1>
           <p className="pagina-subtitulo">Gestión de cuentas y empresas cliente</p>
         </div>
-        <Button variante="primario" onClick={() => abrirFormulario()}>+ Nuevo cliente</Button>
+        {puedeGestionar && <Button variante="primario" onClick={() => abrirFormulario()}>+ Nuevo cliente</Button>}
       </div>
 
       <div className="grilla-kpi grilla-kpi-3" style={{ marginBottom: 24 }}>
@@ -135,7 +138,7 @@ export default function ClientesPage() {
         </div>
 
         <Table
-          columnas={columnas}
+          columnas={puedeGestionar ? columnas : columnas.filter(c=>c.llave!=='acciones')}
           datos={clientes}
           cargando={cargando}
           vacio="No se encontraron clientes registrados"

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { opcionesTurno } from '../../api/operaciones';
 import { useForm } from '../../hooks/useForm';
-import { useAuth } from '../../hooks/useAuth';
+import SelectorPersonalTurno from './SelectorPersonalTurno';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
@@ -24,14 +24,12 @@ const validar = (v) => {
 };
 
 export default function FormTurno({
-  personal,
   servicios,
   sedes,
   onGuardar,
   onCancelar,
   cargando,
 }) {
-  const { usuario } = useAuth();
   const {
     valores,
     errores,
@@ -54,8 +52,7 @@ export default function FormTurno({
     validar
   );
 
-  const esSupervisor = usuario?.rol === 'supervisor';
-  const [opciones, setOpciones] = useState({ servicios: [], compatibilidades: [] });
+  const [opciones, setOpciones] = useState({ servicios: [], compatibilidades: [], personal: [] });
   const [consultando, setConsultando] = useState(true);
   const [errorDisponibilidad, setErrorDisponibilidad] = useState('');
   useEffect(() => {
@@ -74,21 +71,15 @@ export default function FormTurno({
     return () => { activo = false; };
   }, [valores.fecha, valores.horaInicio, valores.horaFin]);
   const compatible = (personalId, servicioId) => opciones.compatibilidades.some((p) => String(p.personalId) === String(personalId) && (!servicioId || String(p.servicioId) === String(servicioId)));
-  const serviciosDisponibles = opciones.servicios.filter((s) => !valores.personalId || compatible(valores.personalId, s.id));
+  const serviciosDisponibles = opciones.servicios;
   const seleccionValida = (!valores.personalId || compatible(valores.personalId, valores.servicioId)) && opciones.servicios.some((s) => String(s.id) === String(valores.servicioId));
 
-  const personalDisponible = personal.filter((p) => {
-    if (p.estado !== 'activo') return false;
-    if (!compatible(p.id, valores.servicioId)) return false;
-    if (esSupervisor) {
-      return p.cargo === 'agente';
-    }
-    return true;
-  });
+  const personalVinculado = (opciones.personal || []).filter(p => String(p.servicioId) === String(valores.servicioId));
 
   const manejarCambioServicio = (e) => {
     const nuevoServicioId = e.target.value;
     manejarCambio(e);
+    establecerValor('personalId', '');
 
     const serv = servicios.find(
       (s) => String(s.id) === String(nuevoServicioId)
@@ -117,8 +108,8 @@ export default function FormTurno({
 
   return (
     <form onSubmit={manejarSubmit} noValidate>
-      <p className="turno-disponibilidad-ayuda" role="status">{consultando ? 'Consultando disponibilidad…' : 'Personal vinculado al servicio, con horario compatible y sin cruces.'}</p>
-      {valores.servicioId && <p role="status">{opciones.servicios.find(s=>String(s.id)===String(valores.servicioId))?.plan_confirmado ? 'El turno generará automáticamente las actividades, rondas y reportes del plan del servicio.' : 'Este servicio no tiene plan operativo confirmado. Configúrelo en Servicios para generar sus obligaciones.'}</p>}
+      <p className="turno-disponibilidad-ayuda" role="status">{consultando ? 'Consultando disponibilidad…' : 'Consulta el personal del servicio y su disponibilidad. Las restricciones se indican en rojo con su motivo.'}</p>
+      {valores.servicioId && <p className="turno-plan-aviso" role="status">{opciones.servicios.find(s=>String(s.id)===String(valores.servicioId))?.plan_confirmado ? 'El turno generará automáticamente las actividades, rondas y reportes del plan del servicio.' : 'Este servicio no tiene plan operativo confirmado. Configúrelo en Servicios para generar sus obligaciones.'}</p>}
       {errorDisponibilidad && <p role="alert">{errorDisponibilidad}</p>}
       <div className="form-grilla">
         <Input
@@ -156,25 +147,13 @@ export default function FormTurno({
           ))}
         </Select>
 
-        <Select
-          id="form-t-personal"
-          label="Personal asignado (opcional)"
-          nombre="personalId"
+        <SelectorPersonalTurno
+          personas={personalVinculado}
           valor={valores.personalId}
-          onChange={manejarCambio}
-          onBlur={manejarBlur}
-          error={errores.personalId}
-          placeholder="Sin asignar: plaza requerida"
-          disabled={consultando}
-        >
-          {personalDisponible.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombres} {p.apellidos} ({p.cargo})
-            </option>
-          ))}
-        </Select>
-        {!consultando && !personalDisponible.length && <p className="tarjeta-subtitulo">No hay personal disponible para esta selección. Cambie la fecha o el horario; también puede crear una plaza sin asignar.</p>}
-        {!consultando && valores.personalId && !seleccionValida && <p role="alert">La selección ya no es compatible. Elija otro agente o deje la plaza sin asignar.</p>}
+          onCambiar={valor => establecerValor('personalId', valor)}
+          cargando={consultando}
+          sinServicio={!valores.servicioId}
+        />
 
         <Select
           id="form-t-sede"
@@ -232,10 +211,10 @@ export default function FormTurno({
       </div>
 
       <div className="form-pie">
-        <Button variante="secundario" onClick={onCancelar} disabled={cargando}>
+        <Button variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>
           Cancelar
         </Button>
-        <Button tipo="submit" variante="primario" cargando={cargando} disabled={consultando || !seleccionValida || !!errorDisponibilidad}>
+        <Button tipo="submit" variante="primario" cargando={cargando} disabled={consultando || !seleccionValida || !!errorDisponibilidad} motivoDeshabilitado={consultando ? 'Espere mientras se consulta la disponibilidad.' : errorDisponibilidad ? 'No se pudo validar la disponibilidad: '+errorDisponibilidad : !valores.servicioId ? 'Seleccione un servicio antes de asignar el turno.' : valores.personalId && !compatible(valores.personalId,valores.servicioId) ? 'El personal seleccionado no está disponible. Revise los motivos en rojo o deje la plaza sin asignar.' : 'El servicio no está vigente para esta fecha. Cambie la fecha o seleccione otro servicio.'}>
           Asignar turno
         </Button>
       </div>

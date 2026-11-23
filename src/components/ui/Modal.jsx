@@ -1,3 +1,4 @@
+import {ControlConAyuda} from './AyudaControl';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from './Button';
 import './Modal.css';
@@ -80,14 +81,14 @@ export function Modal({ modal, onCerrar }) {
             {modal.titulo}
           </h2>
           {modal.tipo !== 'confirmacion' && (
-            <button
+            <ControlConAyuda as="button"
               className="modal-cerrar"
               onClick={onCerrar}
               aria-label="Cerrar"
-              disabled={estaBloqueado}
+              disabled={estaBloqueado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
             >
               ✕
-            </button>
+            </ControlConAyuda>
           )}
         </div>
 
@@ -114,7 +115,7 @@ export function Modal({ modal, onCerrar }) {
                 <Button
                   variante="secundario"
                   onClick={onCerrar}
-                  disabled={estaBloqueado}
+                  disabled={estaBloqueado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                 >
                   {modal.labelCancelar || 'Cancelar'}
                 </Button>
@@ -123,7 +124,7 @@ export function Modal({ modal, onCerrar }) {
                     modal.variante === 'peligro' ? 'peligro' : 'primario'
                   }
                   cargando={estaBloqueado}
-                  disabled={estaBloqueado}
+                  disabled={estaBloqueado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}
                   onClick={manejarConfirmar}
                 >
                   {modal.labelConfirmar || 'Confirmar'}

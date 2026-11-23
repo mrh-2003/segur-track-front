@@ -1,3 +1,4 @@
+import {ControlConAyuda} from '../../components/ui/AyudaControl';
 import { useEffect, useState } from 'react';
 import { get, put } from '../../api/cliente';
 import { Button } from '../../components/ui/Button';
@@ -29,8 +30,9 @@ export function PlanOperativoServicio({ servicioId, puedeEditar }) {
     <p>Defina qué se debe hacer en cada turno. Cada actividad, ronda y reporte genera una obligación independiente para calcular los KPI.</p>
     <p>Estado: <b>{confirmado?'Plan confirmado':'Sin configurar'}</b>. Los cambios se aplican a turnos futuros; la ejecución anterior se conserva.</p>
     {error&&<p role="alert">{error}</p>}{mensaje&&<p role="status">{mensaje}</p>}
+    {(!puedeEditar||ocupado)&&<p className="campo-bloqueo" role="status">{!puedeEditar?'Su rol permite consultar el plan. Solicite su modificación al supervisor o a jefatura.':'Espere a que termine el guardado del plan operativo.'}</p>}
     <form onSubmit={guardar}>
-      <fieldset disabled={!puedeEditar||ocupado}>
+      <ControlConAyuda as="fieldset" disabled={!puedeEditar||ocupado} motivoDeshabilitado={!puedeEditar ? 'Su rol solo permite consultar este plan. Solicite los cambios al supervisor, jefe de operaciones o administrador.' : 'Espere a que termine el guardado del plan operativo.'}>
         <legend>Actividades, rondas y reportes</legend>
         <p>Deje el plazo vacío para exigir la entrega al cierre del turno. Los minutos se cuentan desde su inicio. Un intervalo repite la obligación hasta el cierre. Si el plazo supera la duración del turno, se usa su cierre.</p>
         {items.map((p,i)=><article className="plan-operativo-fila" key={p.id||`nuevo-${i}`}>
@@ -47,8 +49,8 @@ export function PlanOperativoServicio({ servicioId, puedeEditar }) {
           <Button tipo="button" variante="secundario" onClick={()=>setConsignas(consignas.filter((_,j)=>i!==j))}>Quitar consigna</Button>
         </div>)}
         <Button tipo="button" variante="secundario" onClick={()=>setConsignas([...consignas,{descripcion:''}])}>Agregar consigna</Button>
-        {puedeEditar&&<Button tipo="submit" disabled={ocupado}>Guardar y confirmar plan</Button>}
-      </fieldset>
+        {puedeEditar&&<Button tipo="submit" disabled={ocupado} motivoDeshabilitado={"Espere a que termine la operación en curso antes de continuar."}>Guardar y confirmar plan</Button>}
+      </ControlConAyuda>
     </form>
     {!items.length&&<p>Al confirmar un plan vacío declara que este servicio no exige actividades, rondas ni reportes. El monitor mostrará «Sin casos» cuando corresponda.</p>}
   </section>;

@@ -1,3 +1,4 @@
+import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
@@ -16,6 +17,8 @@ import FormSede from './FormSede';
 const DEBOUNCE_MS = 300;
 
 export default function SedesPage() {
+  const {usuario}=useAuth();
+  const puedeGestionar=['administrador','jefe_operaciones'].includes(usuario?.rol);
   const [sedes, setSedes] = useState([]);
   const [resumen, setResumen] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -89,6 +92,8 @@ export default function SedesPage() {
   const columnas = [
     { llave: 'nombre', titulo: 'Nombre', render: (f) => <strong>{f.nombre}</strong> },
     { llave: 'direccion', titulo: 'Dirección', render: (f) => f.direccion || '—' },
+    {llave:'cliente',titulo:'Cliente',render:f=>f.cliente||'Por vincular'},
+    {llave:'supervisor',titulo:'Supervisor responsable',render:f=>f.supervisor||'Por asignar'},
     { llave: 'personal_total', titulo: 'Personal asignado', render: (f) => `${f.personal_total ?? 0} personas` },
     { llave: 'servicios_total', titulo: 'Servicios', render: (f) => `${f.servicios_total ?? 0} servicios` },
     { llave: 'creado_en', titulo: 'Fecha de registro', render: (f) => formatearFecha(f.creado_en) },
@@ -114,7 +119,7 @@ export default function SedesPage() {
           <h1 className="pagina-titulo">Sedes</h1>
           <p className="pagina-subtitulo">Gestión de sedes e instalaciones operativas</p>
         </div>
-        <Button variante="primario" onClick={() => abrirFormulario()}>+ Nueva sede</Button>
+        {puedeGestionar && <Button variante="primario" onClick={() => abrirFormulario()}>+ Nueva sede</Button>}
       </div>
 
       <div className="grilla-kpi grilla-kpi-3" style={{ marginBottom: 24 }}>
@@ -135,7 +140,7 @@ export default function SedesPage() {
         </div>
 
         <Table
-          columnas={columnas}
+          columnas={puedeGestionar ? columnas : columnas.filter(c=>c.llave!=='acciones')}
           datos={sedes}
           cargando={cargando}
           vacio="No se encontraron sedes registradas"

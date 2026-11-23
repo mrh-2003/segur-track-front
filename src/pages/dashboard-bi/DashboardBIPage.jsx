@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { resumenBi,catalogosBi,estadoBi,sincronizarBi,embedBi } from '../../api/bi';
+import { resumenBi,catalogosBi,estadoBi,sincronizarBi } from '../../api/bi';
 import { Button } from '../../components/ui/Button';
 import GraficoLineas from './GraficoLineas';
 import GraficoDona from './GraficoDona';
@@ -14,11 +14,11 @@ export default function DashboardBIPage(){
   const puedeGestionar=['administrador','jefe_operaciones'].includes(usuario?.rol);
   const [f,setF]=useState({periodo:'30',clienteId:'',servicioId:'',sedeId:'',supervisorId:''});
   const [data,setData]=useState(null),[catalogo,setCatalogo]=useState({clientes:[],servicios:[],sedes:[],supervisores:[]}),[estado,setEstado]=useState(null);
-  const [vista,setVista]=useState('indicadores'),[recarga,setRecarga]=useState(0),[cargando,setCargando]=useState(true),[sincronizando,setSincronizando]=useState(false),[error,setError]=useState(''),[mensaje,setMensaje]=useState(''),[embed,setEmbed]=useState('');
+  const [vista,setVista]=useState('indicadores'),[recarga,setRecarga]=useState(0),[cargando,setCargando]=useState(true),[sincronizando,setSincronizando]=useState(false),[error,setError]=useState(''),[mensaje,setMensaje]=useState('');
   const ultimo=useRef(null);
   useEffect(()=>{
     let activo=true;
-    Promise.resolve().then(async()=>{if(activo)setCargando(true);try{const [r,c,s,e]=await Promise.all([resumenBi(f),catalogosBi(),estadoBi(),embedBi()]);if(activo){setData(r);setCatalogo(c);setEstado(s);ultimo.current=s.ultima_carga_en;setEmbed(e.url||'');setError('');}}catch(e){if(activo)setError(e.message);}finally{if(activo)setCargando(false);}});
+    Promise.resolve().then(async()=>{if(activo)setCargando(true);try{const [r,c,s]=await Promise.all([resumenBi(f),catalogosBi(),estadoBi()]);if(activo){setData(r);setCatalogo(c);setEstado(s);ultimo.current=s.ultima_carga_en;setError('');}}catch(e){if(activo)setError(e.message);}finally{if(activo)setCargando(false);}});
     return()=>{activo=false;};
   },[f,recarga]);
   useEffect(()=>{
@@ -30,7 +30,7 @@ export default function DashboardBIPage(){
   const indicador=codigo=>data?.indicadores.find(i=>i.codigo===codigo);
   const filtro=(campo,titulo,items)=><label>{titulo}<select aria-label={titulo} className="campo-input" value={f[campo]} onChange={e=>setF({...f,[campo]:e.target.value})}><option value="">Todos</option>{items.map(x=><option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>;
   return <div className="pagina-bi">
-    <header className="bi-encabezado"><div><h1 className="pagina-titulo">Dashboard BI</h1><p className="pagina-subtitulo">Indicadores operativos e históricos · última sincronización completada</p></div>{puedeGestionar&&<Button cargando={sincronizando} disabled={estado?.ultima?.estado==='ejecutando'} onClick={()=>sincronizar().catch(()=>{})}>Sincronizar datos</Button>}</header>
+    <header className="bi-encabezado"><div><h1 className="pagina-titulo">Dashboard BI</h1><p className="pagina-subtitulo">Indicadores operativos e históricos · última sincronización completada</p></div>{puedeGestionar&&<Button cargando={sincronizando} disabled={estado?.ultima?.estado==='ejecutando'} motivoDeshabilitado={"Ya hay una sincronización en curso. Espere a que finalice para volver a sincronizar."} onClick={()=>sincronizar().catch(()=>{})}>Sincronizar datos</Button>}</header>
     <section className="bi-estado"><div><b>{estado?.ultima?.estado==='ejecutando'?'Sincronización en curso':data?.sincronizado?'Datos disponibles':'Primera carga pendiente'}</b><span>Última carga: {hora(estado?.ultima_carga_en)}</span></div><div><span>Actualización automática cada 60 minutos</span><small>Próxima: {hora(estado?.proxima_carga_en)}</small></div></section>
     {error&&<p className="ejecucion-alerta error" role="alert">{error}</p>}{mensaje&&<p className="ejecucion-alerta exito" role="status">{mensaje}</p>}
     <nav className="bi-pestanas"><button type="button" className={vista==='indicadores'?'activa':''} onClick={()=>setVista('indicadores')}>Indicadores</button>{puedeGestionar&&<button type="button" className={vista==='metas'?'activa':''} onClick={()=>setVista('metas')}>Configurar metas</button>}</nav>
@@ -43,7 +43,6 @@ export default function DashboardBIPage(){
         <section className="tarjeta"><h2>Indicadores del periodo</h2><p className="tarjeta-subtitulo">{data?.periodo?.inicio} al {data?.periodo?.fin} · comparación con {data?.periodo?.anteriorInicio} al {data?.periodo?.anteriorFin}</p><div className="bi-tabla-scroll"><table className="bi-tabla"><thead><tr><th>Código</th><th>Indicador</th><th>Resultado</th><th>Meta</th><th>Variación</th><th>Estado</th></tr></thead><tbody>{(data?.indicadores||[]).map(i=><tr key={i.codigo}><td>{i.codigo}</td><td><b>{i.nombre}</b><small>{i.formula}</small></td><td>{formato(i.valor,i.unidad)}</td><td>{i.meta===null?'Sin meta':(i.sentido==='mayor'?'≥ ':'≤ ')+formato(i.meta,i.unidad)}</td><td>{i.variacion===null?'—':(i.variacion>0?'+':'')+(i.unidad==='%'?Number(i.variacion).toLocaleString('es-PE',{maximumFractionDigits:1}):formato(i.variacion,i.unidad))+(i.unidad==='%'?' pp':'')}</td><td>{i.valor===null?'Sin casos':i.cumple===null?'Informativo':i.cumple?'En meta':'Requiere atención'}</td></tr>)}</tbody></table></div></section>
         <section className="tarjeta"><h2>Cobertura por servicio</h2><div className="bi-tabla-scroll"><table className="bi-tabla"><thead><tr><th>Servicio</th><th>Turnos exigibles</th><th>Descubiertos</th><th>Cobertura</th></tr></thead><tbody>{(data?.servicios||[]).map(s=><tr key={s.id+'-'+s.servicio}><td>{s.servicio}</td><td>{s.turnos}</td><td>{s.descubiertos}</td><td>{formato(s.cobertura,'%')}</td></tr>)}</tbody></table></div></section>
       </>}
-      {embed?<section className="tarjeta"><h2>Informe Power BI</h2><iframe title="Informe Power BI" src={embed} width="100%" height="600" style={{border:0}} allowFullScreen/></section>:<p className="bi-nota">El informe de Power BI se mostrará aquí cuando se configure su publicación.</p>}
     </>}
   </div>;
 }

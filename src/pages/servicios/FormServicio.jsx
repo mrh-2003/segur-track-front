@@ -20,7 +20,7 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
   const {usuario}=useAuth();
   const supervisores = personal.filter((p) => p.cargo === 'supervisor' && (usuario?.rol!=='supervisor' || p.id===usuario.personalId));
 
-  const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
+  const { valores, errores, manejarCambio, manejarBlur, validarTodo, establecerValor } = useForm(
     {
       nombre: inicial?.nombre || '',
       clienteId: inicial?.cliente_id ? String(inicial.cliente_id) : (inicial?.clienteId ? String(inicial.clienteId) : ''),
@@ -58,16 +58,16 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
             onChange={manejarCambio} onBlur={manejarBlur} error={errores.nombre} requerido />
         </div>
         <Select id="form-srv-cliente" label="Cliente" nombre="clienteId" valor={valores.clienteId}
-          onChange={manejarCambio} onBlur={manejarBlur} error={errores.clienteId}
+          onChange={e=>{manejarCambio(e);establecerValor('sedeId','');establecerValor('supervisorId','');}} onBlur={manejarBlur} error={errores.clienteId}
           placeholder="Seleccionar cliente" requerido>
           {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </Select>
         <Select id="form-srv-sede" label="Sede" nombre="sedeId" valor={valores.sedeId}
-          onChange={manejarCambio} onBlur={manejarBlur} error={errores.sedeId}
+          onChange={e=>{manejarCambio(e);establecerValor('supervisorId',String(sedes.find(s=>s.id===Number(e.target.value))?.supervisor_id||''));}} onBlur={manejarBlur} error={errores.sedeId}
           placeholder="Seleccionar sede" requerido>
-          {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          {sedes.filter(s=>s.cliente_id===Number(valores.clienteId)).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
         </Select>
-        <Select id="form-srv-supervisor" label="Supervisor" nombre="supervisorId" valor={valores.supervisorId}
+        <Select id="form-srv-supervisor" label="Supervisor del servicio" nombre="supervisorId" valor={valores.supervisorId}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.supervisorId}
           placeholder="Seleccionar supervisor" requerido>
           {supervisores.map((p) => <option key={p.id} value={p.id}>{p.nombres} {p.apellidos}</option>)}
@@ -91,7 +91,7 @@ export default function FormServicio({ inicial, clientes, personal, sedes, onGua
           valor={valores.fechaFin} onChange={manejarCambio} />
       </div>
       <div className="form-pie">
-        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>Cancelar</Button>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>Cancelar</Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>

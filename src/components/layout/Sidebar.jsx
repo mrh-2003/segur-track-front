@@ -12,7 +12,7 @@ const MENU = [
   {
     ruta: '/personal',
     etiqueta: 'Personal',
-    roles: ['administrador', 'jefe_operaciones'],
+    roles: ['administrador', 'jefe_operaciones', 'supervisor'],
   },
   {
     ruta: '/turnos',
@@ -52,7 +52,7 @@ const MENU = [
   {
     ruta: '/monitor-multicriterio',
     etiqueta: 'Monitor multicriterio',
-    roles: ['administrador', 'jefe_operaciones', 'supervisor'],
+    roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'],
   },
   {
     ruta: '/analisis-historico',

@@ -1,4 +1,5 @@
 import './Input.css';
+import {AyudaControl} from './AyudaControl';
 
 export function Input({
   label,
@@ -12,6 +13,7 @@ export function Input({
   requerido,
   placeholder,
   disabled,
+  motivoDeshabilitado,
   ...resto
 }) {
   return (
@@ -22,7 +24,7 @@ export function Input({
           {requerido && <span className="campo-obligatorio" aria-hidden="true"> *</span>}
         </label>
       )}
-      <input
+      <AyudaControl motivo={disabled?motivoDeshabilitado:null} bloque><input
         id={id || nombre}
         name={nombre}
         type={tipo}
@@ -31,11 +33,13 @@ export function Input({
         onBlur={onBlur}
         placeholder={placeholder}
         disabled={disabled}
+        data-motivo-deshabilitado={disabled?motivoDeshabilitado:undefined}
         aria-invalid={!!error}
-        aria-describedby={error ? `${id || nombre}-error` : undefined}
+        aria-describedby={[error ? `${id || nombre}-error` : '',disabled&&motivoDeshabilitado?`${id || nombre}-bloqueo`:''].filter(Boolean).join(' ')||undefined}
         className={`campo-input ${error ? 'campo-input-error' : ''}`}
         {...resto}
-      />
+      /></AyudaControl>
+      {disabled&&motivoDeshabilitado&&<small id={`${id || nombre}-bloqueo`} className="campo-bloqueo">{motivoDeshabilitado}</small>}
       {error && (
         <p id={`${id || nombre}-error`} className="campo-error" role="alert">{error}</p>
       )}

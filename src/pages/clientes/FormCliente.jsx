@@ -53,7 +53,7 @@ export default function FormCliente({ inicial, onGuardar, onCancelar, cargando }
       </div>
 
       <div className="form-pie" style={{ marginTop: 20 }}>
-        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando}>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>
           Cancelar
         </Button>
         <Button tipo="submit" variante="primario" cargando={cargando}>
