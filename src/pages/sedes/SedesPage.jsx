@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useAuth } from '../../hooks/useAuth';
 import { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../../hooks/useModal';
@@ -10,7 +11,6 @@ import { KpiCard } from '../../components/ui/KpiCard';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Icono } from '../../components/ui/Icono';
 import { formatearFecha } from '../../utils/fechas';
 import FormSede from './FormSede';
 
@@ -100,13 +100,9 @@ export default function SedesPage() {
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar sede">
-            <Icono nombre="editar" tamano={14} />
-          </button>
-          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar sede">
-            <Icono nombre="eliminar" tamano={14} />
-          </button>
+        <div className="tabla-acciones">
+          <BotonAccion etiqueta="Editar sede" icono="editar" onClick={() => abrirFormulario(f)}/>
+          <BotonAccion etiqueta="Eliminar sede" icono="eliminar" peligro onClick={() => manejarEliminar(f)}/>
         </div>
       ),
     },

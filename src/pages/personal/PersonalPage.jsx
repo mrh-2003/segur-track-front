@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
@@ -16,7 +17,6 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import FormPersonal from './FormPersonal';
 import FormCambioSede from './FormCambioSede';
-import { Icono } from '../../components/ui/Icono';
 import './PersonalPage.css';
 
 const DEBOUNCE_MS = 300;
@@ -176,25 +176,13 @@ export default function PersonalPage() {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => f.cargo==='administrador'&&usuario?.rol!=='administrador'?<span className="pagina-subtitulo">Solo administrador</span>:(
         <div className="tabla-acciones">
-          {usuario?.rol!=='supervisor'&&<button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
-            <Icono nombre="editar" tamano={14} />
-          </button>}
-          {f.cargo==='agente'&&<button className="accion-btn" onClick={()=>cambiarSede(f)} title="Cambiar sede">Cambiar sede</button>}
+          {usuario?.rol!=='supervisor'&&<BotonAccion etiqueta="Editar" icono="editar" onClick={() => abrirFormulario(f)}/>}
+          {f.cargo==='agente'&&<BotonAccion etiqueta="Cambiar sede" icono="sede" onClick={()=>cambiarSede(f)}/>}
           {(usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones') && (
-            <button
-              className="accion-btn"
-              onClick={() => manejarReiniciarClave(f)}
-              title="Reiniciar contraseña (volverá a ser su usuario y contraseña)"
-            >
-              <Icono nombre="clave" tamano={14} />
-            </button>
+            <BotonAccion etiqueta="Reiniciar contraseña (volverá a ser su usuario y contraseña)" icono="clave" onClick={() => manejarReiniciarClave(f)}/>
           )}
-          {usuario?.rol!=='supervisor'&&<><button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
-            <Icono nombre="estado" tamano={14} />
-          </button>
-          <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">
-            <Icono nombre="eliminar" tamano={14} />
-          </button></>}
+          {usuario?.rol!=='supervisor'&&<><BotonAccion etiqueta="Cambiar estado" icono="estado" onClick={() => manejarCambiarEstado(f)}/>
+          <BotonAccion etiqueta="Eliminar" icono="eliminar" peligro onClick={() => manejarEliminar(f)}/></>}
         </div>
       ),
     },

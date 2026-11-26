@@ -8,7 +8,7 @@ import {renderToString} from 'react-dom/server';
 import {createServer} from 'vite';
 
 test('todos los controles bloqueables declaran el motivo del bloqueo',()=>{
-  const internos=new Set(['Button.jsx','Input.jsx','Select.jsx','AyudaControl.jsx']);
+  const internos=new Set(['Button.jsx','Input.jsx','Select.jsx','AyudaControl.jsx','BotonAccion.jsx']);
   const pendientes=[];
   function inspeccionar(n,file){
     if(!n||typeof n!=='object')return;

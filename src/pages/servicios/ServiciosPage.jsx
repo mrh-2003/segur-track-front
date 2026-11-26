@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -15,7 +16,6 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
-import { Icono } from '../../components/ui/Icono';
 import { formatearFecha } from '../../utils/fechas';
 import FormServicio from './FormServicio';
 import DetalleRapido from './DetalleRapido';
@@ -193,24 +193,16 @@ export default function ServiciosPage() {
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="accion-btn" onClick={() => abrirDetalleOperativo(f)} title="Detalle operativo y evidencias">
-            <Icono nombre="ojo" tamano={14} />
-          </button>
+        <div className="tabla-acciones">
+          <BotonAccion etiqueta="Detalle operativo y evidencias" icono="ojo" onClick={() => abrirDetalleOperativo(f)}/>
           {esSupervisorOAdmin && (
             <>
-              <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar servicio">
-                <Icono nombre="editar" tamano={14} />
-              </button>
-              <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
-                <Icono nombre="estado" tamano={14} />
-              </button>
+              <BotonAccion etiqueta="Editar servicio" icono="editar" onClick={() => abrirFormulario(f)}/>
+              <BotonAccion etiqueta="Cambiar estado" icono="estado" onClick={() => manejarCambiarEstado(f)}/>
             </>
           )}
           {(usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones') && (
-            <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar servicio">
-              <Icono nombre="eliminar" tamano={14} />
-            </button>
+            <BotonAccion etiqueta="Eliminar servicio" icono="eliminar" peligro onClick={() => manejarEliminar(f)}/>
           )}
         </div>
       ),

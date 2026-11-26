@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../../hooks/useModal';
 import { useAsync } from '../../hooks/useAsync';
@@ -5,7 +6,6 @@ import { listarReportes, historialReportes, generarReporte, descargarReporte } f
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Icono } from '../../components/ui/Icono';
 import { formatearFechaHora, obtenerTimestampDescarga } from '../../utils/fechas';
 import FormExportar from './FormExportar';
 import './ReportesPage.css';
@@ -135,14 +135,7 @@ export default function ReportesPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Badge valor={r.estado} />
-                    <button
-                      className="accion-btn"
-                      onClick={() => manejarDescargar(r.id, r.tipo, r.formato)}
-                      title="Descargar archivo"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <Icono nombre="descargar" tamano={14} /> Descargar
-                    </button>
+                    <BotonAccion etiqueta="Descargar archivo" icono="descargar" onClick={() => manejarDescargar(r.id, r.tipo, r.formato)}/>
                   </div>
                 </div>
               ))}

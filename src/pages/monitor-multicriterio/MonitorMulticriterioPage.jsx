@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
@@ -798,7 +799,7 @@ export default function MonitorMulticriterioPage() {
                     </th>
                   ))}
                   <th>Criticidad</th>
-                  <th />
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -826,14 +827,7 @@ export default function MonitorMulticriterioPage() {
                       </div>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="mv-calculo-btn"
-                        onClick={() => calculo(s)}
-                      >
-                        <IconoMonitor nombre="calculo" tamano={16} />
-                        Ver cálculo
-                      </button>
+                      <BotonAccion etiqueta="Ver cálculo del servicio" icono={<IconoMonitor nombre="calculo" tamano={17}/>} onClick={() => calculo(s)}/>
                     </td>
                   </tr>
                 ))}

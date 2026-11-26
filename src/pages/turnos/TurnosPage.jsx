@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
@@ -201,9 +202,7 @@ export default function TurnosPage() {
       llave: 'acciones',
       titulo: 'Acciones',
       render: (t) => (
-        <Button tipo="button" variante="secundario" onClick={() => detalle(t)}>
-          Ver detalle
-        </Button>
+        <BotonAccion etiqueta="Ver detalle del turno" icono="ojo" onClick={() => detalle(t)}/>
       ),
     },
   ];

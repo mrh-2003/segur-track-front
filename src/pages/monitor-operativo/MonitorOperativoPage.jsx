@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { listarMonitor, detalleMonitor, indicadoresOperativos } from '../../api/monitor';
 import { listarClientes } from '../../api/servicios';
@@ -351,15 +352,7 @@ export default function MonitorOperativoPage() {
       render: (f) => {
         const esActivo = servicioSeleccionado === f.id;
         return (
-          <Button
-            variante={esActivo ? 'primario' : 'secundario'}
-            tamano="sm"
-            onClick={() => setServicioSeleccionado(f.id)}
-            title="Inspeccionar detalle en vivo"
-          >
-            <Icono nombre="ojo" tamano={13} />
-            <span>{esActivo ? 'Viendo' : 'Ver'}</span>
-          </Button>
+          <BotonAccion activo={esActivo} etiqueta={esActivo?'Viendo detalle en vivo':'Inspeccionar detalle en vivo'} icono="ojo" aria-pressed={esActivo} onClick={() => setServicioSeleccionado(f.id)}/>
         );
       },
     },

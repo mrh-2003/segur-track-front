@@ -1,3 +1,4 @@
+import {BotonAccion} from '../../components/ui/BotonAccion';
 import {get} from '../../api/cliente';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -44,7 +45,7 @@ export default function IncidenciasPage(){
   {llave:'servicio',titulo:'Servicio y responsable',render:i=><>{i.servicio}<small className="inc-tabla-secundario">{i.responsable||'Sin responsable operativo'}</small></>},
   {llave:'plazo',titulo:'Plazo de resolución',render:i=><><b>{i.plazo_resolucion?formatearFechaHora(i.plazo_resolucion):'Sin plazo definido'}</b>{vencida(i)&&<strong className="inc-alerta-texto">PLAZO VENCIDO · CRÍTICA</strong>}{i.atencion_vencida&&i.estado==='abierta'&&<small className="inc-alerta-texto">Primera atención vencida</small>}{i.plazo_resolucion_extendido&&<small className="inc-tabla-secundario">Plazo ampliado y aprobado</small>}</>},
   {llave:'estado',titulo:'Seguimiento',render:i=><><span>{i.estado==='cerrada'?'Resuelta':i.estado==='en_atencion'?'En atención':'Por atender'}</span>{i.ampliacion_pendiente&&<strong className="inc-solicitud-marca">Ampliación pendiente de aprobación</strong>}</>},
-  {llave:'acciones',titulo:'Acción',render:i=><div className="tabla-acciones"><Button variante="secundario" onClick={()=>abrir(i)}>{i.ampliacion_pendiente?'Ver solicitud y seguimiento':'Abrir seguimiento'}</Button>{['administrador','jefe_operaciones'].includes(usuario?.rol)&&<Button variante="peligro" onClick={()=>eliminar(i)}>Eliminar</Button>}</div>}
+  {llave:'acciones',titulo:'Acción',render:i=><div className="tabla-acciones"><BotonAccion etiqueta={i.ampliacion_pendiente?'Ver solicitud y seguimiento':'Abrir seguimiento de incidencia'} icono="ojo" onClick={()=>abrir(i)}/>{['administrador','jefe_operaciones'].includes(usuario?.rol)&&<BotonAccion etiqueta="Eliminar incidencia" icono="eliminar" peligro onClick={()=>eliminar(i)}/>}</div>}
  ];
  return <div className="inc-pagina fade-in"><header className="pagina-encabezado"><div><h1 className="pagina-titulo">Incidencias</h1><p className="pagina-subtitulo">Reportar → atender → corregir con evidencia → resolver</p></div><div className="inc-cabecera-acciones">{usuario?.rol==='administrador'&&<details><summary>Exportar registros</summary><Button variante="secundario" onClick={()=>exportar('xlsx')}>Excel</Button><Button variante="secundario" onClick={()=>exportar('pdf')}>PDF</Button></details>}<Button onClick={formulario}>Reportar incidencia</Button></div></header>
   {error&&<p className="inc-error" role="alert">{error}</p>}
