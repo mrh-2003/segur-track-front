@@ -40,16 +40,6 @@ const MENU = [
     roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'],
   },
   {
-    ruta: '/monitor-operativo',
-    etiqueta: 'Monitor Operativo',
-    roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'],
-  },
-  {
-    ruta: '/dashboard-bi',
-    etiqueta: 'Dashboard BI',
-    roles: ['administrador', 'jefe_operaciones', 'supervisor'],
-  },
-  {
     ruta: '/monitor-multicriterio',
     etiqueta: 'Monitor multicriterio',
     roles: ['administrador', 'jefe_operaciones', 'supervisor', 'operador'],
@@ -78,8 +68,6 @@ export function Sidebar({ visible, onCerrar }) {
     '/sedes': 'sede',
     '/clientes': 'personal',
     '/incidencias': 'incidencias',
-    '/monitor-operativo': 'escudo',
-    '/dashboard-bi': 'actividad',
     '/monitor-multicriterio': 'actividad',
     '/analisis-historico': 'calendario',
     '/reportes': 'actividad',

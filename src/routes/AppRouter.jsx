@@ -9,12 +9,10 @@ import PersonalPage from '../pages/personal/PersonalPage';
 import TurnosPage from '../pages/turnos/TurnosPage';
 import ServiciosPage from '../pages/servicios/ServiciosPage';
 import IncidenciasPage from '../pages/incidencias/IncidenciasPage';
-import DashboardBIPage from '../pages/dashboard-bi/DashboardBIPage';
 import MonitorMulticriterioPage from '../pages/monitor-multicriterio/MonitorMulticriterioPage';
 import ReportesPage from '../pages/reportes/ReportesPage';
 import SedesPage from '../pages/sedes/SedesPage';
 import ClientesPage from '../pages/clientes/ClientesPage';
-import MonitorOperativoPage from '../pages/monitor-operativo/MonitorOperativoPage';
 import AnalisisHistoricoPage from '../pages/analisis-historico/AnalisisHistoricoPage';
 
 export function AppRouter() {
@@ -31,14 +29,14 @@ export function AppRouter() {
             <Route path="/servicios" element={operador?<MonitorOperador />:<ServiciosPage />} />
             <Route path="/turnos" element={<TurnosPage />} />
             <Route path="/incidencias" element={<IncidenciasPage />} />
-            <Route path="/monitor-operativo" element={operador?<MonitorOperador />:<MonitorOperativoPage />} />
+            <Route path="/monitor-operativo" element={<Navigate to="/monitor-multicriterio" replace />} />
 
             <Route path="/monitor-multicriterio" element={operador?<MonitorOperador />:<MonitorMulticriterioPage />} />
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones', 'supervisor']} />}>
               <Route path="/personal" element={<PersonalPage />} />
               <Route path="/sedes" element={<SedesPage />} />
               <Route path="/clientes" element={<ClientesPage />} />
-              <Route path="/dashboard-bi" element={<DashboardBIPage />} />
+              <Route path="/dashboard-bi" element={<Navigate to="/?vista=indicadores" replace />} />
             </Route>
 
             <Route element={<ProtectedRoute rolesPermitidos={['administrador', 'jefe_operaciones']} />}>

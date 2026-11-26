@@ -1,7 +1,9 @@
 import ImportarExcel from './ImportarExcel';
 import DisponibilidadPanel from './DisponibilidadPanel';
+import PanelIndicadores from '../dashboard-bi/PanelIndicadores';
+import {funcionalidades} from '../../config/funcionalidades';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   resumenInicio,
   actividadOperativa,
@@ -43,6 +45,10 @@ export default function InicioPage() {
   const [recientes, setRecientes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const navigate = useNavigate();
+  const [parametros,setParametros]=useSearchParams();
+  const vista=parametros.get('vista')==='indicadores'?'indicadores':'resumen';
+  const cambiarVista=(siguiente)=>{const nuevos=new URLSearchParams(parametros);if(siguiente==='resumen')nuevos.delete('vista');else nuevos.set('vista',siguiente);setParametros(nuevos,{replace:true});};
+  const tecladoVistas=e=>{const teclas=['ArrowLeft','ArrowRight','Home','End'];if(!teclas.includes(e.key))return;e.preventDefault();const siguiente=e.key==='Home'?'resumen':e.key==='End'?'indicadores':vista==='resumen'?'indicadores':'resumen';cambiarVista(siguiente);e.currentTarget.parentElement.querySelector('#inicio-tab-'+siguiente)?.focus();};
   const { informar } = useModal();
   const { usuario } = useAuth();
 
@@ -52,6 +58,7 @@ export default function InicioPage() {
   const esOperador = usuario?.rol === 'operador';
 
   useEffect(() => {
+    if(vista!=='resumen')return;
     let activo = true;
     (async () => {
       try {
@@ -75,7 +82,7 @@ export default function InicioPage() {
     return () => {
       activo = false;
     };
-  }, [informar, esOperador, usuario?.id, usuario?.rol]);
+  }, [informar, esOperador, usuario?.id, usuario?.rol, vista]);
 
   return (
     <div className="fade-in">
@@ -86,8 +93,12 @@ export default function InicioPage() {
         </div>
       </div>
 
+      {esGestor&&<div className="inicio-vistas" role="tablist" aria-label="Contenido de Inicio">
+        {[['resumen','Resumen','escudo'],['indicadores','Reportes e indicadores','actividad']].map(([id,label,icono])=><button key={id} type="button" role="tab" id={'inicio-tab-'+id} aria-controls={'inicio-panel-'+id} aria-selected={vista===id} tabIndex={vista===id?0:-1} onKeyDown={tecladoVistas} onClick={()=>cambiarVista(id)}><Icono nombre={icono} tamano={18}/><span>{label}</span></button>)}
+      </div>}
+      {vista==='resumen'?<section id="inicio-panel-resumen" role="tabpanel" aria-labelledby="inicio-tab-resumen" className="inicio-resumen">
       {['administrador','jefe_operaciones'].includes(usuario?.rol) && <DisponibilidadPanel />}
-      {['administrador', 'jefe_operaciones'].includes(usuario?.rol) && (
+      {funcionalidades.importarTareaje && ['administrador', 'jefe_operaciones'].includes(usuario?.rol) && (
         <ImportarExcel
           onCompletado={() =>
             resumenInicio()
@@ -247,6 +258,7 @@ export default function InicioPage() {
           )}
         </div>
       )}
+      </section>:<section id="inicio-panel-indicadores" role="tabpanel" aria-labelledby="inicio-tab-indicadores"><PanelIndicadores/></section>}
     </div>
   );
 }

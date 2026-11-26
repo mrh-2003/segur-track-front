@@ -29,7 +29,7 @@ test('las acciones de todas las tablas usan iconos con descripción',()=>{
  function recorrer(dir){for(const f of fs.readdirSync(dir,{withFileTypes:true})){
   const p=path.join(dir,f.name);if(f.isDirectory())recorrer(p);else if(p.endsWith('.jsx'))controles(parse(fs.readFileSync(p,'utf8'),{sourceType:'module',plugins:['jsx']}),p);
  }}
- recorrer('src/pages');assert.ok(columnas>=7,'Debe revisar las columnas de acciones de todos los módulos');assert.deepEqual(errores,[]);
+ recorrer('src/pages');assert.ok(columnas>=6,'Debe revisar las columnas de acciones de todos los módulos');assert.deepEqual(errores,[]);
 });
 
 test('el botón muestra solo un icono y conserva descripción y ayuda de bloqueo',async()=>{

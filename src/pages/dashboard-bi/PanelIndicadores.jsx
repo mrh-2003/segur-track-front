@@ -9,7 +9,7 @@ import './DashboardBIPage.css';
 const formato=(v,u)=>v===null||v===undefined?'—':Number(v).toLocaleString('es-PE',{maximumFractionDigits:u==='cantidad'?0:1})+(u==='%'?' %':u==='min'?' min':u==='por_1000'?' / 1.000':'');
 const hora=v=>v?new Date(v).toLocaleString('es-PE',{timeZone:'America/Lima'}):'Pendiente';
 const SERIES=[{campo:'cobertura',nombre:'Cobertura',color:'#3b82f6'},{campo:'ausentismo',nombre:'Ausentismo',color:'#a78bfa'},{campo:'tardanzas',nombre:'Tardanzas',color:'#f59e0b'}];
-export default function DashboardBIPage(){
+export default function PanelIndicadores(){
   const {usuario}=useAuth();
   const puedeGestionar=['administrador','jefe_operaciones'].includes(usuario?.rol);
   const [f,setF]=useState({periodo:'30',clienteId:'',servicioId:'',sedeId:'',supervisorId:''});
@@ -30,7 +30,7 @@ export default function DashboardBIPage(){
   const indicador=codigo=>data?.indicadores.find(i=>i.codigo===codigo);
   const filtro=(campo,titulo,items)=><label>{titulo}<select aria-label={titulo} className="campo-input" value={f[campo]} onChange={e=>setF({...f,[campo]:e.target.value})}><option value="">Todos</option>{items.map(x=><option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>;
   return <div className="pagina-bi">
-    <header className="bi-encabezado"><div><h1 className="pagina-titulo">Dashboard BI</h1><p className="pagina-subtitulo">Indicadores operativos e históricos · última sincronización completada</p></div>{puedeGestionar&&<Button cargando={sincronizando} disabled={estado?.ultima?.estado==='ejecutando'} motivoDeshabilitado={"Ya hay una sincronización en curso. Espere a que finalice para volver a sincronizar."} onClick={()=>sincronizar().catch(()=>{})}>Sincronizar datos</Button>}</header>
+    <header className="bi-encabezado"><div><h2 className="inicio-panel-titulo">Reportes e indicadores</h2><p className="pagina-subtitulo">{usuario?.rol==='supervisor'?'Indicadores e históricos de tus servicios asignados':'Indicadores operativos e históricos de tus servicios'}</p></div>{puedeGestionar&&<Button cargando={sincronizando} disabled={estado?.ultima?.estado==='ejecutando'} motivoDeshabilitado={"Ya hay una sincronización en curso. Espere a que finalice para volver a sincronizar."} onClick={()=>sincronizar().catch(()=>{})}>Sincronizar datos</Button>}</header>
     <section className="bi-estado"><div><b>{estado?.ultima?.estado==='ejecutando'?'Sincronización en curso':data?.sincronizado?'Datos disponibles':'Primera carga pendiente'}</b><span>Última carga: {hora(estado?.ultima_carga_en)}</span></div><div><span>Actualización automática cada 60 minutos</span><small>Próxima: {hora(estado?.proxima_carga_en)}</small></div></section>
     {error&&<p className="ejecucion-alerta error" role="alert">{error}</p>}{mensaje&&<p className="ejecucion-alerta exito" role="status">{mensaje}</p>}
     <nav className="bi-pestanas"><button type="button" className={vista==='indicadores'?'activa':''} onClick={()=>setVista('indicadores')}>Indicadores</button>{puedeGestionar&&<button type="button" className={vista==='metas'?'activa':''} onClick={()=>setVista('metas')}>Configurar metas</button>}</nav>
