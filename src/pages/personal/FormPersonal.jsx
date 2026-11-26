@@ -13,7 +13,7 @@ const validar = (v) => {
   if (!v.correo || !/\S+@\S+\.\S+/.test(v.correo)) e.correo = 'Correo electrónico válido requerido';
   if (!v.cargo) e.cargo = 'Seleccione un cargo';
   if (v.cargo==='supervisor'&&!v.sedeIds.length) e.sedeIds='Asigne al menos una sede';
-  if (['agente','administrativo'].includes(v.cargo)&&!v.sedeId) e.sedeId='Seleccione una sede';
+  if (v.cargo==='agente'&&!v.sedeId) e.sedeId='Seleccione una sede';
   if (!!v.horarioInicio !== !!v.horarioFin) e.horarioFin = 'Complete ambas horas';
   if (!v.diasLaborales?.length) e.diasLaborales = 'Seleccione al menos un día';
   return e;
@@ -69,7 +69,6 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
           <option value="jefe_operaciones">Jefe de Operaciones</option>
           <option value="supervisor">Supervisor</option>
           <option value="agente">Agente</option>
-          <option value="administrativo">Administrativo</option>
         </Select>
         <Select id="form-estado" label="Estado" nombre="estado" valor={valores.estado}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.estado}>

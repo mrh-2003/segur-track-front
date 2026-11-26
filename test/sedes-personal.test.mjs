@@ -18,6 +18,7 @@ test('Personal usa sedes opcionales para administradores y jefes, múltiples par
   assert.match(jefe,/Opcional. El jefe de operaciones mantiene acceso a todas las sedes/);
   const admin=renderToString(h(Form,{inicial:{cargo:'administrador',sede_ids:[]},sedes:[],puedeGestionarAdministradores:true}));
   assert.match(admin,/<option value="administrador" selected="">Administrador/);
+  assert.doesNotMatch(admin,/<option value="administrativo"/);
   assert.match(admin,/El administrador mantiene acceso a todas las sedes/);
   assert.doesNotMatch(admin,/Cree una sede antes/);
   assert.doesNotMatch(render('jefe_operaciones'),/<option value="administrador"/);
