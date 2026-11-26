@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   listarPersonal, resumenPersonal, crearPersonal,
   actualizarPersonal, cambiarEstadoPersonal, eliminarPersonal,
-  reiniciarClavePersonal, listarSedes,
+  reiniciarClavePersonal, listarSedes, cambiarSedePersonal,
 } from '../../api/personal';
 import { KpiCard } from '../../components/ui/KpiCard';
 import { Table } from '../../components/ui/Table';
@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import FormPersonal from './FormPersonal';
+import FormCambioSede from './FormCambioSede';
 import { Icono } from '../../components/ui/Icono';
 import './PersonalPage.css';
 
@@ -92,14 +93,14 @@ export default function PersonalPage() {
   }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, sedes]);
 
   useEffect(() => {
-    if (location.state?.abrirModal) {
+    if (location.state?.abrirModal && usuario?.rol!=='supervisor') {
       window.history.replaceState({}, document.title);
       const timer = setTimeout(() => {
         abrirFormulario();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [location.state, abrirFormulario]);
+  }, [location.state, abrirFormulario,usuario?.rol]);
 
   const manejarEliminar = (item) => {
     confirmar(
@@ -155,6 +156,9 @@ export default function PersonalPage() {
     );
   };
 
+  const cambiarSede = (item) => {
+    abrirModal({tipo:'formulario',titulo:'Cambiar sede del agente',contenido:<FormCambioSede agente={item} sedes={sedes} onCancelar={cerrarModal} onGuardar={async sedeId=>{await cambiarSedePersonal(item.id,sedeId);cerrarModal();await cargar();}}/>});
+  };
   const columnas = [
     {
       llave: 'nombre_completo',
@@ -168,16 +172,17 @@ export default function PersonalPage() {
     },
     { llave: 'documento', titulo: 'Documento' },
     { llave: 'cargo', titulo: 'Cargo', render: (f) => <span style={{ textTransform: 'capitalize' }}>{f.cargo}</span> },
-    { llave: 'sede', titulo: 'Sede', render: (f) => f.sede || '—' },
+    { llave: 'sede', titulo: 'Sedes asignadas', render: (f) => f.sedes?.join(', ') || f.sede || 'Sin asignación' },
     { llave: 'turno_actual', titulo: 'Turno actual', render: (f) => f.turno_actual || <span style={{ color: 'var(--color-texto-tenue)' }}>—</span> },
     { llave: 'estado', titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
     {
       llave: 'acciones', titulo: 'Acciones',
       render: (f) => (
         <div className="tabla-acciones">
-          <button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
+          {usuario?.rol!=='supervisor'&&<button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
             <Icono nombre="editar" tamano={14} />
-          </button>
+          </button>}
+          {f.cargo==='agente'&&<button className="accion-btn" onClick={()=>cambiarSede(f)} title="Cambiar sede">Cambiar sede</button>}
           {(usuario?.rol === 'administrador' || usuario?.rol === 'jefe_operaciones') && (
             <button
               className="accion-btn"
@@ -187,12 +192,12 @@ export default function PersonalPage() {
               <Icono nombre="clave" tamano={14} />
             </button>
           )}
-          <button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
+          {usuario?.rol!=='supervisor'&&<><button className="accion-btn" onClick={() => manejarCambiarEstado(f)} title="Cambiar estado">
             <Icono nombre="estado" tamano={14} />
           </button>
           <button className="accion-btn accion-btn-peligro" onClick={() => manejarEliminar(f)} title="Eliminar">
             <Icono nombre="eliminar" tamano={14} />
-          </button>
+          </button></>}
         </div>
       ),
     },
@@ -239,7 +244,7 @@ export default function PersonalPage() {
         </div>
 
         <Table
-          columnas={usuario?.rol==='supervisor'?columnas.filter(c=>c.llave!=='acciones'):columnas}
+          columnas={columnas}
           datos={personal}
           cargando={cargando}
           vacio="No se encontró personal con los filtros seleccionados"

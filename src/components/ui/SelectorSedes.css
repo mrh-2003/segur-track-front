@@ -1,0 +1,13 @@
+.selector-sedes { grid-column:1 / -1; }
+.selector-sedes-desplegable { border:1px solid var(--color-borde); border-radius:10px; background:var(--color-superficie,white); }
+.selector-sedes-desplegable>summary { display:flex; justify-content:space-between; padding:12px 14px; cursor:pointer; list-style:none; }
+.selector-sedes-desplegable>summary:focus-visible { outline:2px solid var(--color-primario); border-radius:10px; }
+.selector-sedes-panel { padding:12px; border-top:1px solid var(--color-borde); }
+.selector-sedes-opciones { max-height:220px; overflow:auto; margin-top:8px; }
+.selector-sedes-opciones label { display:flex; gap:10px; align-items:center; padding:10px; border-radius:6px; cursor:pointer; }
+.selector-sedes-opciones label:hover { background:var(--color-fondo-alt); }
+.selector-sedes-opciones small { display:block; color:var(--color-texto-tenue); }
+.selector-sedes-etiquetas { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.selector-sedes-etiquetas>span { display:flex; align-items:center; gap:8px; padding:5px 9px; border-radius:8px; background:var(--color-fondo-alt); font-size:var(--tam-sm); }
+.selector-sedes-etiquetas button { border:0; background:transparent; cursor:pointer; color:inherit; font-size:18px; }
+.selector-sedes>small { color:var(--color-texto-tenue); }

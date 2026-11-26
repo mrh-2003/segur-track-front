@@ -1,3 +1,4 @@
+import SelectorSedes from '../../components/ui/SelectorSedes';
 import { useForm } from '../../hooks/useForm';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -10,7 +11,8 @@ const validar = (v) => {
   if (!v.documento || !/^\d{8}$/.test(v.documento)) e.documento = 'DNI debe tener 8 dígitos numéricos';
   if (!v.correo || !/\S+@\S+\.\S+/.test(v.correo)) e.correo = 'Correo electrónico válido requerido';
   if (!v.cargo) e.cargo = 'Seleccione un cargo';
-  if (!v.sedeId) e.sedeId = 'Seleccione una sede';
+  if (v.cargo==='supervisor'&&!v.sedeIds.length) e.sedeIds='Asigne al menos una sede';
+  if (['agente','administrativo'].includes(v.cargo)&&!v.sedeId) e.sedeId='Seleccione una sede';
   if (!!v.horarioInicio !== !!v.horarioFin) e.horarioFin = 'Complete ambas horas';
   if (!v.diasLaborales?.length) e.diasLaborales = 'Seleccione al menos un día';
   return e;
@@ -28,6 +30,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
       horarioInicio: inicial?.horario_inicio?.slice(0,5) || '',
       horarioFin: inicial?.horario_fin?.slice(0,5) || '',
       diasLaborales: inicial?.dias_laborales || [0,1,2,3,4,5,6],
+      sedeIds: inicial?.sede_ids || (inicial?.sede_id ? [inicial.sede_id] : []),
       sedeId:    inicial?.sede_id ? String(inicial.sede_id) : (inicial?.sedeId ? String(inicial.sedeId) : ''),
     },
     validar
@@ -36,7 +39,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
   const manejarSubmit = (e) => {
     e.preventDefault();
     if (!validarTodo()) return;
-    onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: parseInt(valores.sedeId, 10) });
+    onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: ['supervisor','jefe_operaciones'].includes(valores.cargo)?(valores.sedeIds[0]||null):Number(valores.sedeId), sedeIds: ['supervisor','jefe_operaciones'].includes(valores.cargo)?valores.sedeIds:[Number(valores.sedeId)] });
   };
 
   return (
@@ -65,11 +68,11 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>
         </Select>
-        <Select id="form-sede" label="Sede" nombre="sedeId" valor={valores.sedeId}
+        {['supervisor','jefe_operaciones'].includes(valores.cargo)?<SelectorSedes sedes={sedes} valor={valores.sedeIds} onChange={v=>establecerValor('sedeIds',v)} requerido={valores.cargo==='supervisor'} error={errores.sedeIds}/>:<Select id="form-sede" label="Sede" nombre="sedeId" valor={valores.sedeId}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.sedeId}
           placeholder="Seleccionar sede" requerido>
           {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-        </Select>
+        </Select>}
       </div>
       <details className="horario-personal">
         <summary>Horario laboral</summary>

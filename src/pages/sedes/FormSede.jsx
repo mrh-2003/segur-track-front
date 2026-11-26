@@ -11,13 +11,12 @@ const validar = (v) => {
     e.nombre = 'El nombre de la sede debe tener al menos 3 caracteres';
   }
   if(!v.clienteId)e.clienteId='Seleccione un cliente';
-  if(!v.supervisorId)e.supervisorId='Seleccione un supervisor';
   return e;
 };
 
 export default function FormSede({ inicial, onGuardar, onCancelar, cargando }) {
   const [clientes,setClientes]=useState([]),[supervisores,setSupervisores]=useState([]),[error,setError]=useState('');
-  useEffect(()=>{let activo=true;Promise.all([get('/clientes?limite=1000'),get('/personal?estado=activo&limite=100')]).then(([c,p])=>{if(activo){setClientes(c);setSupervisores(p.filter(x=>x.cargo==='supervisor'));}}).catch(e=>{if(activo)setError(e.message);});return()=>{activo=false;};},[]);
+  useEffect(()=>{let activo=true;Promise.all([get('/clientes?limite=1000'),get('/personal/supervisores')]).then(([c,p])=>{if(activo){setClientes(c);setSupervisores(p);}}).catch(e=>{if(activo)setError(e.message);});return()=>{activo=false;};},[]);
   const { valores, errores, manejarCambio, manejarBlur, validarTodo } = useForm(
     {
       nombre: inicial?.nombre || '',
@@ -30,7 +29,7 @@ export default function FormSede({ inicial, onGuardar, onCancelar, cargando }) {
   const manejarSubmit = (e) => {
     e.preventDefault();
     if (!validarTodo()) return;
-    onGuardar({...valores,clienteId:Number(valores.clienteId),supervisorId:Number(valores.supervisorId)});
+    onGuardar({...valores,clienteId:Number(valores.clienteId),supervisorId:valores.supervisorId?Number(valores.supervisorId):null});
   };
 
   return (
@@ -50,8 +49,8 @@ export default function FormSede({ inicial, onGuardar, onCancelar, cargando }) {
         />
 
         <Select id="sede-cliente" label="Cliente de la sede" nombre="clienteId" valor={valores.clienteId} onChange={manejarCambio} error={errores.clienteId} placeholder="Seleccionar cliente" requerido>{clientes.map(c=><option key={c.id} value={c.id}>{c.nombre}</option>)}</Select>
-        <Select id="sede-supervisor" label="Supervisor responsable" nombre="supervisorId" valor={valores.supervisorId} onChange={manejarCambio} error={errores.supervisorId} placeholder="Seleccionar supervisor" requerido>{supervisores.map(p=><option key={p.id} value={p.id}>{p.nombres} {p.apellidos}</option>)}</Select>
-        <p className="pagina-subtitulo">Los nuevos servicios de esta sede usarán este supervisor. Podrás elegir otro al crear el servicio.</p>
+        <Select id="sede-supervisor" label="Supervisor predeterminado (opcional)" nombre="supervisorId" valor={valores.supervisorId} onChange={manejarCambio} error={errores.supervisorId} placeholder="Sin supervisor asignado">{supervisores.map(p=><option key={p.id} value={p.id}>{p.nombres} {p.apellidos}</option>)}</Select>
+        <p className="pagina-subtitulo">Puede crear la sede ahora y asignar un supervisor después. Los servicios usarán el supervisor predeterminado o el que elija al crearlos.</p>
         <Input
           id="sede-direccion"
           label="Dirección"
