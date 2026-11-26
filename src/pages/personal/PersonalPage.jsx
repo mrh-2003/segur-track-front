@@ -68,6 +68,7 @@ export default function PersonalPage() {
       contenido: (
         <FormPersonal
           inicial={item}
+          puedeGestionarAdministradores={usuario?.rol==='administrador'}
           sedes={sedes}
           onGuardar={async (datos) => {
             await ejecutar(async () => {
@@ -86,7 +87,7 @@ export default function PersonalPage() {
         />
       ),
     });
-  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, sedes]);
+  }, [abrirModal, cerrarModal, cargar, cargandoAccion, ejecutar, informar, sedes,usuario?.rol]);
 
   useEffect(() => {
     if (location.state?.abrirModal && usuario?.rol!=='supervisor') {
@@ -173,7 +174,7 @@ export default function PersonalPage() {
     { llave: 'estado', titulo: 'Estado', render: (f) => <Badge valor={f.estado} /> },
     {
       llave: 'acciones', titulo: 'Acciones',
-      render: (f) => (
+      render: (f) => f.cargo==='administrador'&&usuario?.rol!=='administrador'?<span className="pagina-subtitulo">Solo administrador</span>:(
         <div className="tabla-acciones">
           {usuario?.rol!=='supervisor'&&<button className="accion-btn" onClick={() => abrirFormulario(f)} title="Editar">
             <Icono nombre="editar" tamano={14} />

@@ -19,7 +19,7 @@ const validar = (v) => {
   return e;
 };
 
-export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, cargando }) {
+export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, cargando, puedeGestionarAdministradores=false }) {
   const [guardando,setGuardando]=useState(false),[errorGuardar,setErrorGuardar]=useState('');
   const enCurso=useRef(false);
   const { valores, errores, manejarCambio, manejarBlur, establecerValor, establecerErroresApi, validarTodo } = useForm(
@@ -43,7 +43,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
     e.preventDefault();
     if (enCurso.current || cargando || !validarTodo()) return;
     enCurso.current=true;setGuardando(true);setErrorGuardar('');
-    try {await onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: ['supervisor','jefe_operaciones'].includes(valores.cargo)?(valores.sedeIds[0]||null):Number(valores.sedeId), sedeIds: ['supervisor','jefe_operaciones'].includes(valores.cargo)?valores.sedeIds:[Number(valores.sedeId)] });
+    try {await onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: ['administrador','supervisor','jefe_operaciones'].includes(valores.cargo)?(valores.sedeIds[0]||null):Number(valores.sedeId), sedeIds: ['administrador','supervisor','jefe_operaciones'].includes(valores.cargo)?valores.sedeIds:[Number(valores.sedeId)] });
     }catch(err){setErrorGuardar(err.message);establecerErroresApi(err.errores||[]);}
     finally{enCurso.current=false;setGuardando(false);}
   };
@@ -65,6 +65,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         <Select id="form-cargo" label="Cargo" nombre="cargo" valor={valores.cargo}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.cargo}
           placeholder="Seleccionar cargo" requerido>
+          {puedeGestionarAdministradores&&<option value="administrador">Administrador</option>}
           <option value="jefe_operaciones">Jefe de Operaciones</option>
           <option value="supervisor">Supervisor</option>
           <option value="agente">Agente</option>
@@ -75,7 +76,7 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>
         </Select>
-        {['supervisor','jefe_operaciones'].includes(valores.cargo)?<SelectorSedes sedes={sedes} valor={valores.sedeIds} onChange={v=>establecerValor('sedeIds',v)} requerido={valores.cargo==='supervisor'} error={errores.sedeIds}/>:<Select id="form-sede" label="Sede" nombre="sedeId" valor={valores.sedeId}
+        {['administrador','supervisor','jefe_operaciones'].includes(valores.cargo)?<SelectorSedes sedes={sedes} valor={valores.sedeIds} onChange={v=>establecerValor('sedeIds',v)} requerido={valores.cargo==='supervisor'} rol={valores.cargo} error={errores.sedeIds}/>:<Select id="form-sede" label="Sede" nombre="sedeId" valor={valores.sedeId}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.sedeId}
           placeholder="Seleccionar sede" requerido>
           {sedes.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
