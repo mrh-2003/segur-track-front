@@ -1,3 +1,4 @@
+import {useRef,useState} from 'react';
 import SelectorSedes from '../../components/ui/SelectorSedes';
 import { useForm } from '../../hooks/useForm';
 import { Input } from '../../components/ui/Input';
@@ -19,7 +20,9 @@ const validar = (v) => {
 };
 
 export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, cargando }) {
-  const { valores, errores, manejarCambio, manejarBlur, establecerValor, validarTodo } = useForm(
+  const [guardando,setGuardando]=useState(false),[errorGuardar,setErrorGuardar]=useState('');
+  const enCurso=useRef(false);
+  const { valores, errores, manejarCambio, manejarBlur, establecerValor, establecerErroresApi, validarTodo } = useForm(
     {
       nombres:   inicial?.nombres   || '',
       apellidos: inicial?.apellidos || '',
@@ -36,14 +39,18 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
     validar
   );
 
-  const manejarSubmit = (e) => {
+  const manejarSubmit = async (e) => {
     e.preventDefault();
-    if (!validarTodo()) return;
-    onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: ['supervisor','jefe_operaciones'].includes(valores.cargo)?(valores.sedeIds[0]||null):Number(valores.sedeId), sedeIds: ['supervisor','jefe_operaciones'].includes(valores.cargo)?valores.sedeIds:[Number(valores.sedeId)] });
+    if (enCurso.current || cargando || !validarTodo()) return;
+    enCurso.current=true;setGuardando(true);setErrorGuardar('');
+    try {await onGuardar({ ...valores, horarioInicio: valores.horarioInicio || null, horarioFin: valores.horarioFin || null, sedeId: ['supervisor','jefe_operaciones'].includes(valores.cargo)?(valores.sedeIds[0]||null):Number(valores.sedeId), sedeIds: ['supervisor','jefe_operaciones'].includes(valores.cargo)?valores.sedeIds:[Number(valores.sedeId)] });
+    }catch(err){setErrorGuardar(err.message);establecerErroresApi(err.errores||[]);}
+    finally{enCurso.current=false;setGuardando(false);}
   };
 
   return (
     <form onSubmit={manejarSubmit} noValidate>
+      {errorGuardar&&<p className="campo-error" role="alert">{errorGuardar}</p>}
       <div className="form-grilla">
         <Input id="form-nombres" label="Nombres" nombre="nombres" valor={valores.nombres}
           onChange={manejarCambio} onBlur={manejarBlur} error={errores.nombres} requerido />
@@ -85,8 +92,8 @@ export default function FormPersonal({ inicial, sedes, onGuardar, onCancelar, ca
         {errores.diasLaborales && <p role="alert">{errores.diasLaborales}</p>}
       </details>
       <div className="form-pie">
-        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>Cancelar</Button>
-        <Button tipo="submit" variante="primario" cargando={cargando}>
+        <Button tipo="button" variante="secundario" onClick={onCancelar} disabled={cargando||guardando} motivoDeshabilitado={"Espere mientras se cargan los datos o se procesa la solicitud."}>Cancelar</Button>
+        <Button tipo="submit" variante="primario" cargando={cargando||guardando}>
           {inicial ? 'Guardar' : 'Crear'}
         </Button>
       </div>

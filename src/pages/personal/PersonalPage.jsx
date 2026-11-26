@@ -71,18 +71,14 @@ export default function PersonalPage() {
           sedes={sedes}
           onGuardar={async (datos) => {
             await ejecutar(async () => {
-              try {
-                if (item) {
-                  await actualizarPersonal(item.id, datos);
-                } else {
-                  await crearPersonal(datos);
-                }
-                cerrarModal();
-                await cargar();
-                informar('Operación exitosa', item ? 'Personal actualizado correctamente' : 'Personal creado correctamente', 'exito');
-              } catch (err) {
-                informar('Error', err.message, 'error');
+              if (item) {
+                await actualizarPersonal(item.id, datos);
+              } else {
+                await crearPersonal(datos);
               }
+              cerrarModal();
+              await cargar();
+              informar('Operación exitosa', item ? 'Personal actualizado correctamente' : 'Personal creado correctamente', 'exito');
             });
           }}
           onCancelar={cerrarModal}
